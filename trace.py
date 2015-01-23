@@ -7,8 +7,8 @@ class Trace:
     states:
         waiting
         ready
-        (when hit:)
         accessing
+        (when hit:)
         shifting
         reading/writing
         finished

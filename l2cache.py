@@ -32,7 +32,7 @@ class L2Cache:
     def next_cycle(self):
         self.current_tick += 1000
 
-        # # the current trace finished, and next one is ready
+        # ↓ leave them in rm
         # if self.current_tick >= self.current_trace.finish_tick:
         #     self.current_trace.state = 'finished'
         #
