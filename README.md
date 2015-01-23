@@ -1,6 +1,7 @@
 # RacetrackEmulator
 
 ## Basic Design
+
 1. functional module
 1.1 trace parser
 1.2 SRAM (Tag & valid)
@@ -16,6 +17,7 @@
 2.2 Racetrace Memory 
 
 Procedure of emulator:
+
 1. fetch instr (MemControl)
 2. decode (TraceParser)
 3. find corresponding tag&valid in SRAM
@@ -25,7 +27,7 @@ Procedure of emulator:
 
 ## Class Design:
 
-```
+```cpp
 class Configs {
 	l2_size
 	l2_assoc
@@ -36,7 +38,7 @@ class Configs {
 }
 ```
 
-```
+```cpp
 class MemControl {
 Methods:
 	MemControl(trace_path);
@@ -51,7 +53,7 @@ Methods:
 ```
 
 
-```
+```cpp
 class TraceParser {
 Methods:
 	TraceParser(trace);
@@ -63,7 +65,7 @@ Members:
 }
 ```
 
-```
+```cpp
 class SRAM {
 Methods:
 	SRAM(l2_size);
@@ -75,10 +77,10 @@ Members:
 }
 ```
 
-```
+```cpp
 typedef Set int64_t[set_line_num][group_tape/64];
 ```
-```c
+```cpp
 class RacetrackMemory {
 Methods:
 	RacetrackMemory(l2_size, tape_domain, group_tape, pos[]...);
