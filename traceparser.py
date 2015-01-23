@@ -1,11 +1,19 @@
 __author__ = 'bilibili'
 
-import configs
+from configs import OFFSET_BITS, SET_BITS
+from trace import Trace
 
 
 def parse(trace):
-    trace_bits = bin(trace)
-    byte_offset = int(trace_bits[-configs.OFFSET_BITS:], 2)
-    index = int(trace_bits[-(configs.OFFSET_BITS + configs.SET_BITS):configs.OFFSET_BITS], 2)
-    tag = int(trace_bits[2:-(configs.OFFSET_BITS + configs.SET_BITS)], 2)
+    args = trace.split()
+    if args[0] == 'u':
+        args[0] = 'w'
+    return Trace(args[0], __addr_parse(args[1]), args[4])
+
+
+def __addr_parse(addr):
+    trace_bits = bin(addr)
+    byte_offset = int(trace_bits[-OFFSET_BITS:], 2)
+    index = int(trace_bits[-(OFFSET_BITS + SET_BITS):OFFSET_BITS], 2)
+    tag = int(trace_bits[2:-(OFFSET_BITS + SET_BITS)], 2)
     return tag, index, byte_offset
