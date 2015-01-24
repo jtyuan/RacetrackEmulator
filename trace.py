@@ -21,6 +21,7 @@ class Trace:
         self.tag = parsed_addr[0]
         self.index = parsed_addr[1]
         self.offset = parsed_addr[2]
-        self.tick = tick
+        self.start_tick = tick
         self.state = 'waiting'
         self.hit = False
+        self.target_line_num = -1
