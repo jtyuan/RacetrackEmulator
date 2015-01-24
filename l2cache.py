@@ -13,10 +13,13 @@ class L2Cache:
     EOF = False
 
     def __init__(self, trace_file):
+        """
+        __init__(trace_file) - constructor
+        :param trace_file: the path of the trace file to emulate
+        """
         self.trace_file = open(os.path.abspath(trace_file), 'r')
         self.sram = SRAM(LINE_NUM)
         self.rm = RM(self.sram)
-
 
         print('Starting up')
         print('\nCurrent tick: 0')
@@ -32,6 +35,9 @@ class L2Cache:
             self.current_tick -= CLOCK_CYCLE
 
     def next_trace(self):
+        """
+        next_trace() - start process next trace & pre fetch the 2nd next trace
+        """
         print('Start process waiting trace')
         self.current_trace = self.waiting_trace
 
@@ -47,6 +53,10 @@ class L2Cache:
         self.rm.next_trace(self.current_trace, self.waiting_trace)
 
     def next_cycle(self):
+        """
+        next_cycle() - move the clock to next cycle, do what ever should be done in this cycle
+        :return:
+        """
         self.current_tick += CLOCK_CYCLE
 
         print('\nCurrent tick:', self.current_tick)
@@ -64,7 +74,7 @@ class L2Cache:
 
         if self.current_trace.state == 'finished' and self.waiting_trace.state == 'ready':
             # for t, k in zip(self.sram.tags, range(len(self.sram.tags))):
-            #     if t is not None:
+            # if t is not None:
             #         print(t, k)
             self.next_trace()
 

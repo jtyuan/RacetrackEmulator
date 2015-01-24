@@ -29,9 +29,18 @@ class RM:
     total_shift_dis = 0
 
     def __init__(self, sram):
+        """
+        __init__(sram) - constructor
+        :param sram: the SRAM that maintains tag array
+        """
         self.sram = sram
 
     def next_trace(self, current_trace, waiting_trace):
+        """
+        next_trace(current_trace, waiting_trace) - setup for next trace
+        :param current_trace: the trace to be processed immediately
+        :param waiting_trace: the trace to be processed after current trace finishes
+        """
         self.current_trace = current_trace
         self.waiting_trace = waiting_trace
 
@@ -45,6 +54,15 @@ class RM:
         self.access_count += 1
 
     def shift(self, port_type, target_port, target_group, target_group_line, dis):
+        """
+        shift(port_type, target_port, target_group ,target_group_line, dis) - shift a group of tapes to target line
+        :param port_type: the type of port to be used ('r', 'w', 'rw')
+        :param target_port: the index for the target port
+        :param target_group: the group that the target belongs to
+        :param target_group_line: the line in the group in which the target is
+        :param dis: the distance to shift
+        :return: the distance to shift
+        """
         g = target_group
         p = target_port
 
@@ -74,6 +92,10 @@ class RM:
         return shift_dis
 
     def next_cycle(self, tick):
+        """
+        next_cycle(tick) - move 1 cycle forward, do all the works that should be done in this cycle
+        :param tick: current tick
+        """
         self.total_cycles += 1
         self.count_down -= CLOCK_CYCLE
 

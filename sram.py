@@ -9,6 +9,10 @@ class SRAM:
     stamp = []
 
     def __init__(self, line_num):
+        """
+        __init__(line_num) - constructor
+        :param line_num: the line # in L2 cache, each line has 64 blocks (512 bits)
+        """
         self.tags = line_num * [None]
         self.valid = line_num * [False]
         self.stamp = line_num * [0]
@@ -49,7 +53,7 @@ class SRAM:
         """
         update_line_number(index) - decide which line to replace/take
         :param index:
-        :return:
+        :return: the best line# to take/replace
         """
         min_stamp = -1
         best = index * L2_ASSOC
