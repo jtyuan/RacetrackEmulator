@@ -1,6 +1,6 @@
 __author__ = 'bilibili'
 
-from configs import OFFSET_BITS, SET_BITS, VERBOSE
+from configs import Configs
 from trace import Trace
 
 
@@ -23,13 +23,13 @@ def __addr_parse(addr):
     :return: tag, index, byte offset of corresponding address
     """
     trace_bits = bin(addr)
-    byte_offset = int(trace_bits[max(-OFFSET_BITS, 2-len(trace_bits)):], 2)
-    index = int(trace_bits[max(-(OFFSET_BITS + SET_BITS), 2-len(trace_bits)):-OFFSET_BITS], 2)
-    tag = trace_bits[2:-(OFFSET_BITS + SET_BITS)]
+    byte_offset = int(trace_bits[max(-Configs.OFFSET_BITS, 2-len(trace_bits)):], 2)
+    index = int(trace_bits[max(-(Configs.OFFSET_BITS + Configs.SET_BITS), 2-len(trace_bits)):-Configs.OFFSET_BITS], 2)
+    tag = trace_bits[2:-(Configs.OFFSET_BITS + Configs.SET_BITS)]
     if len(tag) > 0:
         tag = int(tag, 2)
     else:
         tag = 0
-    if VERBOSE:
+    if Configs.VERBOSE:
         print('Instr tag:', bin(tag)[2:], 'index:', bin(index)[2:], 'offset:', bin(byte_offset)[2:])
     return tag, index, byte_offset

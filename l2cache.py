@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 __author__ = 'bilibili'
 
 import os
@@ -19,23 +20,30 @@ class L2Cache:
         :param trace_file: the path of the trace file to emulate
         """
         self.trace_file = open(os.path.abspath(trace_file), 'r')
-        self.sram = SRAM(LINE_NUM)
+
+        if not self.trace_file:
+            print('Trace file not exist, please check path:', os.path.abspath(trace_file))
+            self.EOF = True
+
+        self.sram = SRAM(Configs.LINE_NUM)
         self.rm = RM(self.sram)
 
-        print('Starting up')
-        if VERBOSE:
+        Configs.print_info()
+
+        print('**Emulation Start**')
+        if Configs.VERBOSE:
             print('\nCurrent tick: 0')
             print('Trace state: current(unfetched) next(unfetched)\n')
 
         self.current_trace = Trace()
-        if VERBOSE:
+        if Configs.VERBOSE:
             print('Fetching the first trace')
         self.waiting_trace = parse(self.trace_file.readline())
         self.next_trace()  # get 1st trace
         # set current_tick to one cycle before the first trace
-        self.current_tick = self.current_trace.start_tick // CLOCK_CYCLE * CLOCK_CYCLE
+        self.current_tick = self.current_trace.start_tick // Configs.CLOCK_CYCLE * Configs.CLOCK_CYCLE
         if self.current_tick == self.current_trace.start_tick:
-            self.current_tick -= CLOCK_CYCLE
+            self.current_tick -= Configs.CLOCK_CYCLE
 
     def next_trace(self):
         """
@@ -43,7 +51,7 @@ class L2Cache:
         """
 
         self.trace_count += 1
-        if VERBOSE:
+        if Configs.VERBOSE:
             print('Start process waiting trace')
             print('Executing the {0}th trace'.format(self.trace_count))
 
@@ -59,7 +67,7 @@ class L2Cache:
             print('No more traces left')
             self.waiting_trace = Trace(instr='EOF')
         else:
-            if VERBOSE:
+            if Configs.VERBOSE:
                 print('Pre-fetching next trace')
             self.waiting_trace = parse(next_line)
         self.rm.next_trace(self.current_trace, self.waiting_trace)
@@ -69,20 +77,22 @@ class L2Cache:
         next_cycle() - move the clock to next cycle, do what ever should be done in this cycle
         :return:
         """
-        self.current_tick += CLOCK_CYCLE
+        self.current_tick += Configs.CLOCK_CYCLE
 
-        if VERBOSE:
+        if Configs.VERBOSE:
             print('\nCurrent tick:', self.current_tick)
 
         self.rm.next_cycle(self.current_tick)
 
         if self.current_trace.state == 'finished' and self.EOF:
-            print('\nEmulation Complete')
-            print('total cycles:', self.current_tick // CLOCK_CYCLE)
+            print('\n**Emulation Complete**')
+            print('secs emulated:', self.current_tick / Configs.CPU_CLOCK)
+            print('total cycles:', self.current_tick // Configs.CLOCK_CYCLE)
             print('total shifts:', self.rm.total_shifts)
-            print('total shift distance:', self.rm.total_shift_dis)
+            print('total shift overhead:', self.rm.total_shift_dis)
             print('total access:', self.rm.access_count)
             print('total misses:', self.rm.miss_count)
+            print('**********************')
             return False
 
         if self.current_trace.state == 'finished' and self.waiting_trace.state == 'ready':
@@ -98,8 +108,9 @@ class L2Cache:
 
     def boost_cycle(self, num=1000):
         """
-        boost_cycle(num) - move the cycle forward by 'num', DEBUG use
+        boost_cycle(num) - move the cycle forward by 'num', for DEBUG use
         :param num: cycles to move forward
         :return: None
         """
-        self.current_tick += CLOCK_CYCLE * num
+        self.current_tick += Configs.CLOCK_CYCLE * num
+        print('Current tick:', self.current_tick)

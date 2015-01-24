@@ -6,6 +6,7 @@ from configs import *
 class SRAM:
     tags = []
     valid = []
+    dirty = []
     stamp = []
 
     def __init__(self, line_num):
@@ -15,6 +16,7 @@ class SRAM:
         """
         self.tags = line_num * [None]
         self.valid = line_num * [False]
+        self.dirty = line_num * [False]
         self.stamp = line_num * [0]
         self.line_num = line_num
 
@@ -40,14 +42,15 @@ class SRAM:
         :return: True if success
         """
         line = self.update_line_number(index)
-        if VERBOSE:
+        if Configs.VERBOSE:
             print('SRAM updating with tag:{0} on line {1}'.format(tag, line))
         if line < 0 or line >= self.line_num:
             return False
         self.tags[line] = tag
         self.valid[line] = True
         self.stamp[line] = tick
-        if VERBOSE:
+        self.dirty[line] = False
+        if Configs.VERBOSE:
             print('SRAM tag array updated')
         return True
 
@@ -58,7 +61,7 @@ class SRAM:
         :return: the best line# to take/replace
         """
         min_stamp = -1
-        best = index * L2_ASSOC
+        best = index * Configs.L2_ASSOC
         for l in SRAM.set_line_numbers(index):
             if self.valid[l] is False:
                 # if there is an empty line
@@ -73,7 +76,33 @@ class SRAM:
                 min_stamp = self.stamp[l]
                 best = l
 
+        if self.valid[best] is True:
+            # a replacement occurred
+            if Configs.VERBOSE:
+                print('Line {0} in L2 Cache is replaced'.format(best))
+            if self.dirty[best] is True:
+                print('This block is dirty, write back to next memory level')
+
         return best
+
+    def write(self, target_line_num, tick):
+        """
+        write(target_line_number, tick) - write on the l2 cache, set dirty bit
+        :param target_line_num: the line number in the l2 cache to write
+        :param tick: the time when write happens
+        """
+        if Configs.VERBOSE:
+            print('Write on line {0} in L2 Cache, marked as dirty'.format(target_line_num))
+        self.dirty[target_line_num] = True
+        self.stamp[target_line_num] = tick
+
+    def read(self, target_line_num, tick):
+        """
+        read(tick) - write on the l2 cache, set dirty bit
+        :param target_line_num: the line number in the l2 cache to read
+        :param tick: the time when read happens
+        """
+        self.stamp[target_line_num] = tick
 
     @staticmethod
     def set_line_numbers(index):
@@ -82,5 +111,5 @@ class SRAM:
         :param index: set index
         :return: line numbers belong to this set
         """
-        for i in range(L2_ASSOC):
-            yield index * L2_ASSOC + i
+        for i in range(Configs.L2_ASSOC):
+            yield index * Configs.L2_ASSOC + i
