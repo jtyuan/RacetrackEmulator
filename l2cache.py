@@ -55,7 +55,7 @@ class L2Cache:
 
         if self.current_trace.state == 'finished' and self.EOF:
             print('\nEmulation Complete')
-            print('total cycles:', self.rm.total_cycles)
+            print('total cycles:', self.current_tick / CLOCK_CYCLE)
             print('total shifts:', self.rm.total_shifts)
             print('total shift distance:', self.rm.total_shift_dis)
             print('total access:', self.rm.access_count)

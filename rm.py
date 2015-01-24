@@ -79,12 +79,15 @@ class RM:
 
         print('Trace state: current({0}) next({1})'.format(self.current_trace.state, self.waiting_trace.state))
 
-        print('Count down:', self.count_down)
+        if self.count_down >= 0:
+            print('Count down:', self.count_down)
+        else:
+            print('Waiting for next instr')
 
         if self.waiting_trace.instr != 'EOF' and tick > self.waiting_trace.start_tick:
             self.waiting_trace.state = 'ready'
 
-        if self.count_down <= 0:
+        if self.count_down == 0:
             if self.current_trace.state == 'accessing':
                 print('L2 Cache accessed')
 
