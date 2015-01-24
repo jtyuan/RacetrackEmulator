@@ -111,5 +111,12 @@ class SRAM:
         :param index: set index
         :return: line numbers belong to this set
         """
-        for i in range(Configs.L2_ASSOC):
-            yield index * Configs.L2_ASSOC + i
+        if Configs.SET_PARTITION == 'con':
+            for i in range(Configs.L2_ASSOC):
+                yield index * Configs.L2_ASSOC + i
+        elif Configs.SET_PARTITION == 'way':
+            for i in range(Configs.L2_ASSOC):
+                yield Configs.SET_NUM * i + index
+        else:
+            print('Error: undefined set partitioning policy')
+            exit()

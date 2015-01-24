@@ -24,7 +24,10 @@ def add_arguments(parser):
     parser.add_argument('--l2-access-latency', action='store', type=int, default=6)
     parser.add_argument('--l2-shift-latency', action='store', type=int, default=1)
     parser.add_argument('--l2-miss-latency', action='store', type=int, default=100)
-    parser.add_argument('--port-mode', action='store', type=str, default='rw')
+    parser.add_argument('-pm', '--port-mode', action='store', type=str, default='rw')
+    parser.add_argument('-ps', '--port-selection', action='store', type=str, default='dynamic')
+    # parser.add_argument('-pp', '--port-update-policy', action='store', type=str, default='lazy')
+    parser.add_argument('-sp', '--set_partition', action='store', type=str, default='con')
     parser.add_argument('-v', '--verbose', action='store_true')
 
 
@@ -63,7 +66,11 @@ if __name__ == "__main__":
     Configs.L2_ACCESS_LATENCY = args.l2_access_latency
     Configs.L2_SHIFT_LATENCY = args.l2_shift_latency
     Configs.L2_MISS_PENALTY = args.l2_miss_latency
+
     Configs.PORT_MODE = args.port_mode
+    Configs.PORT_SELECTION = args.port_selection
+    # Configs.PORT_UPDATE_POLICY = args.port_update_policy
+    Configs.SET_PARTITION = args.set_partition
 
     if args.verbose is True:
         Configs.VERBOSE = True

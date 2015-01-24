@@ -21,7 +21,7 @@ class Configs:
     ADDRESS_BITS = 32        # address space bits
 
     TAPE_DOMAIN = 64         # # of domains on a tape
-    TAPE_LENGTH = 80         # TODO
+    TAPE_LENGTH = 80         # unimportant in simulation
     GROUP_TAPE = 512         # # of tapes in a group
 
     GROUP_NUM = L2_SIZE // (GROUP_TAPE * TAPE_DOMAIN)  # # of groups
@@ -35,7 +35,10 @@ class Configs:
     SET_BITS = int(math.log2(SET_NUM))  # # of bits that set index takes in an address
     TAG_BITS = int(math.log2(ADDRESS_BITS) - SET_BITS - OFFSET_BITS)  # # of bits that tag takes in an address
 
-    PORT_MODE = 'rw'
+    PORT_MODE = 'rw'  # rw - only rw ports; rw+r - rw ports and r ports; w+r - w ports and r ports
+    PORT_SELECTION = 'dynamic'   # static - move to given port; dynamic - move to nearest port
+    # PORT_UPDATE_POLICY = 'lazy'  # eager - move back to fixed position after r/w; lazy - stay where the last r/w happens
+    SET_PARTITION = 'con'  # con - continuous, way - separate by ways
 
     VERBOSE = False
 

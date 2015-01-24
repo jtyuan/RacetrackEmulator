@@ -7,6 +7,12 @@ from configs import Configs
 Some thoughts:
     when SRAM miss, the latency is SRAM accessing time
     when SRAM hits, the latency would only be DWM accessing time, SRAM is not in the critical path
+
+    when miss:
+        update/replace
+    when hit:
+        read(update timestamp in SRAM)
+        write(update timestamp in SRAM, set dirty bit) -- write back
 '''
 
 RW_PORT_SIZE = 12  # the size of a W/R port
@@ -164,44 +170,121 @@ class RM:
                     if self.current_trace.instr == 'r':
                         # if current instr is read, to find closest read port or rw port
                         if R_PORT_NUM > 0:
-                            for pos_k, k in zip(self.r_port, range(R_PORT_NUM)):
-                                # looking for the closest read port
-                                d_k = abs(pos_k + self.offset[target_group] - target_group_line)
-                                if d_k < d:
-                                    d = d_k
-                                    target_port = k
-                                    port_type = 'r'
-                                k += 1
+                            if Configs.PORT_SELECTION == 'dynamic':
+                                for pos_k, k in zip(self.r_port, range(R_PORT_NUM)):
+                                    # looking for the closest read port
+                                    d_k = abs(pos_k + self.offset[target_group] - target_group_line)
+                                    if d_k < d:
+                                        d = d_k
+                                        target_port = k
+                                        port_type = 'r'
+                            elif Configs.PORT_SELECTION == 'static':
+                                for pos_k, k in zip(self.r_port, range(R_PORT_NUM)):
+                                    if pos_k <= target_group_line <= R_PORT_SIZE + pos_k:
+                                        d = abs(pos_k + self.offset[target_group] - target_group_line)
+                                        target_port = k
+                                        port_type = 'r'
+                                        break
+                            else:
+                                print('Error: undefined port selection policy')
+                                exit()
                         if RW_PORT_NUM > 0:  # if there is rw port
-                            for pos_k, k in zip(self.rw_port, range(RW_PORT_NUM)):
-                                # looking for the closest rw port
-                                d_k = abs(pos_k + self.offset[target_group] - target_group_line)
-                                if d_k < d:
-                                    d = d_k
-                                    target_port = k
-                                    port_type = 'rw'
-                                k += 1
+                            if Configs.PORT_SELECTION == 'dynamic':
+                                for pos_k, k in zip(self.rw_port, range(RW_PORT_NUM)):
+                                    # looking for the closest rw port
+                                    d_k = abs(pos_k + self.offset[target_group] - target_group_line)
+                                    if d_k < d:
+                                        d = d_k
+                                        target_port = k
+                                        port_type = 'rw'
+                            elif Configs.PORT_SELECTION == 'static':
+                                for pos_k, k in zip(self.rw_port, range(RW_PORT_NUM)):
+                                    if pos_k <= target_group_line <= RW_PORT_SIZE + pos_k:
+                                        d = abs(pos_k + self.offset[target_group] - target_group_line)
+                                        target_port = k
+                                        port_type = 'rw'
+                                        break
+                            else:
+                                print('Error: undefined port selection policy')
+                                exit()
+                        if Configs.PORT_MODE == 'w+r' and Configs.PORT_SELECTION == 'static' \
+                                and port_type == 'undefined':
+                            # haven't found a port in corresponding area
+                            # only when use 'w+r' port mode can this situation occur
+                            if target_line_num < Configs.TAPE_DOMAIN // 2 and R_PORT_NUM > 0:
+                                # target is in the 1st half of the group
+                                d = abs(self.r_port[0] + self.offset[target_group] - target_group_line)
+                                target_port = 0
+                                port_type = 'r'
+                            else:
+                                target_port = int((R_PORT_NUM + 0.5) // 2)
+                                d = abs(self.r_port[target_port] + self.offset[target_group] - target_group_line)
+                                port_type = 'r'
                         self.shift(port_type, target_port, target_group, target_group_line, d)
                     elif self.current_trace.instr == 'w':
                         # if current instr is write, to find closest write port or rw port
                         if W_PORT_NUM > 0:
-                            for pos_k, k in zip(self.w_port, range(W_PORT_NUM)):
-                                # looking for the closest write port
-                                d_k = abs(pos_k + self.offset[target_group] - target_group_line)
-                                if d_k < d:
-                                    d = d_k
-                                    target_port = k
-                                    port_type = 'w'
-                                k += 1
+                            if Configs.PORT_SELECTION == 'dynamic':
+                                for pos_k, k in zip(self.w_port, range(W_PORT_NUM)):
+                                    # looking for the closest write port
+                                    d_k = abs(pos_k + self.offset[target_group] - target_group_line)
+                                    if d_k < d:
+                                        d = d_k
+                                        target_port = k
+                                        port_type = 'w'
+                            elif Configs.PORT_SELECTION == 'static':
+                                for pos_k, k in zip(self.w_port, range(W_PORT_NUM)):
+                                    if pos_k <= target_group_line <= W_PORT_SIZE + pos_k:
+                                        d = abs(pos_k + self.offset[target_group] - target_group_line)
+                                        target_port = k
+                                        port_type = 'w'
+                                        break
+                            else:
+                                print('Error: undefined port selection policy')
+                                exit()
                         if RW_PORT_NUM > 0:  # if there is rw port
-                            for pos_k, k in zip(self.rw_port, range(RW_PORT_NUM)):
-                                # looking for the closest rw port
-                                d_k = abs(pos_k + self.offset[target_group] - target_group_line)
-                                if d_k < d:
-                                    d = d_k
-                                    target_port = k
+                            if Configs.PORT_SELECTION == 'dynamic':
+                                for pos_k, k in zip(self.rw_port, range(RW_PORT_NUM)):
+                                    # looking for the closest rw port
+                                    d_k = abs(pos_k + self.offset[target_group] - target_group_line)
+                                    if d_k < d:
+                                        d = d_k
+                                        target_port = k
+                                        port_type = 'rw'
+                            elif Configs.PORT_SELECTION == 'static':
+                                for pos_k, k in zip(self.rw_port, range(RW_PORT_NUM)):
+                                    if pos_k <= target_group_line <= RW_PORT_SIZE + pos_k:
+                                        d = abs(pos_k + self.offset[target_group] - target_group_line)
+                                        target_port = k
+                                        port_type = 'rw'
+                                        break
+                            else:
+                                print('Error: undefined port selection policy')
+                                exit()
+                        if Configs.PORT_MODE != 'rw' and Configs.PORT_SELECTION == 'static' \
+                                and port_type == 'undefined':
+                            # haven't found a port in corresponding area
+                            if W_PORT_NUM > 0:
+                                if target_line_num < Configs.TAPE_DOMAIN // 2:
+                                    # target is in the 1st half of the group
+                                    d = abs(self.w_port[0] + self.offset[target_group] - target_group_line)
+                                    target_port = 0
+                                    port_type = 'w'
+                                else:
+                                    target_port = int((W_PORT_NUM + 0.5) // 2)
+                                    d = abs(self.w_port[target_port] + self.offset[target_group] - target_group_line)
+                                    port_type = 'w'
+                            elif RW_PORT_NUM > 0:
+                                if target_line_num < Configs.TAPE_DOMAIN // 2:
+                                    # target is in the 1st half of the group
+                                    d = abs(self.rw_port[0] + self.offset[target_group] - target_group_line)
+                                    target_port = 0
                                     port_type = 'rw'
-                                k += 1
+                                else:
+                                    target_port = int((RW_PORT_NUM + 0.5) // 2)
+                                    d = abs(self.rw_port[target_port] + self.offset[target_group] - target_group_line)
+                                    port_type = 'rw'
+
                         self.shift(port_type, target_port, target_group, target_group_line, d)
                     else:
                         print('Error: Unknown Instruction type:', self.current_trace.instr)
@@ -272,4 +355,4 @@ class RM:
                 self.current_trace.state = 'finished'
                 if Configs.VERBOSE:
                     print('Current trace finished\n')
-                # end of if count_down == 0
+                    # end of if count_down == 0
