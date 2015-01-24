@@ -32,20 +32,29 @@ class L2Cache:
     def next_cycle(self):
         self.current_tick += 1000
 
-        # ↓ leave them in rm
+        # ↓ leave them to rm
         # if self.current_tick >= self.current_trace.finish_tick:
-        #     self.current_trace.state = 'finished'
+        # self.current_trace.state = 'finished'
         #
         # if self.current_tick >= self.waiting_trace.tick:
-        #     self.current_trace.state = 'ready'
+        # self.current_trace.state = 'ready'
 
-        self.rm.next_cycle()
+        self.rm.next_cycle(self.current_tick)
+
+        # if self.current_trace.state == 'shifting' or \
+        # self.current_trace.state == 'reading' or \
+        #    self.current_trace.state == 'writing':
+        #     # T/ODO pre-fetch logic
+        #     dummy = 1
 
         if self.current_trace.state == 'finished' and self.waiting_trace.state == 'ready':
             self.next_trace()
-            self.current_trace.state = 'accessing'
-            self.rm.set_trace(self.current_trace,
-                              self.sram.compare_tag(self.current_trace.tag, self.current_trace.index))
+            self.rm.next_trace(self.current_trace,
+                               self.sram.compare_tag(self.current_trace.tag, self.current_trace.index))
+
+        if self.waiting_trace.state != 'ready':
+            # TODO pre-fetch logic
+            dummy = 1
 
     @staticmethod
     def set_line_numbers(index):
@@ -55,4 +64,4 @@ class L2Cache:
         :return: line numbers belong to this set
         """
         for i in range(L2_ASSOC):
-            yield index + i
+            yield index * L2_ASSOC + i

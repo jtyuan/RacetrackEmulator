@@ -18,6 +18,7 @@ BYTE_SIZE = 8            # bits of 1 byte
 ADDRESS_BITS = 32        # address space bits
 
 TAPE_DOMAIN = 64         # # of domains on a tape
+TAPE_LENGTH = 80         # TODO
 GROUP_TAPE = 512         # # of tapes in a group
 GROUP_NUM = L2_SIZE / (GROUP_TAPE * TAPE_DOMAIN)  # # of groups
 LINE_NUM = GROUP_NUM * TAPE_DOMAIN  # # of lines

@@ -7,10 +7,13 @@ class Trace:
     states:
         waiting
         ready
-        accessing
+        accessing - 6 cycles
         (when hit:)
-        shifting
-        reading/writing
+        shifting  - 1 cycle per domain
+        reading/writing - 1 cycle
+        finished
+        (when miss:)
+        memory    - 100 cycles
         finished
     """
     def __init__(self, instr='u', parsed_addr=(-1, -1, -1), tick=0):
@@ -20,3 +23,4 @@ class Trace:
         self.offset = parsed_addr[2]
         self.tick = tick
         self.state = 'waiting'
+        self.hit = False
