@@ -74,7 +74,7 @@ class RM:
         return shift_dis
 
     def next_cycle(self, tick):
-        self.total_cycles += CLOCK_CYCLE
+        self.total_cycles += 1
         self.count_down -= CLOCK_CYCLE
 
         print('Trace state: current({0}) next({1})'.format(self.current_trace.state, self.waiting_trace.state))
