@@ -32,10 +32,4 @@ OFFSET_BITS = int(math.log2(BLOCK_SIZE // BYTE_SIZE))  # # of bits that byte off
 SET_BITS = int(math.log2(SET_NUM))  # # of bits that set index takes in an address
 TAG_BITS = int(math.log2(ADDRESS_BITS) - SET_BITS - OFFSET_BITS)  # # of bits that tag takes in an address
 
-RW_PORT_SIZE = 12        # the size of a W/R port
-W_PORT_SIZE = 8          # the size of a W port
-R_PORT_SIZE = 4          # the size of a R port
-
-RW_PORT_NUM = 4
-R_PORT_NUM = 0
-W_PORT_NUM = 0
+VERBOSE = False

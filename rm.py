@@ -9,16 +9,20 @@ Some thoughts:
     when SRAM hits, the latency would only be DWM accessing time, SRAM is not in the critical path
 '''
 
+RW_PORT_SIZE = 12  # the size of a W/R port
+W_PORT_SIZE = 8  # the size of a W port
+R_PORT_SIZE = 4  # the size of a R port
+
+RW_PORT_NUM = 4
+R_PORT_NUM = 0
+W_PORT_NUM = 0
+
 
 class RM:
     current_trace = Trace()
     waiting_trace = Trace()
 
     count_down = 0
-
-    r_port = []
-    w_port = []
-    rw_port = [0, 16, 32, 48]
 
     offset = GROUP_NUM * [0]
 
@@ -28,12 +32,21 @@ class RM:
     total_shifts = 0
     total_shift_dis = 0
 
-    def __init__(self, sram):
+    def __init__(self, sram, r_port=[].copy(), w_port=[].copy(), rw_port=[0, 16, 32, 48].copy()):
         """
         __init__(sram) - constructor
         :param sram: the SRAM that maintains tag array
         """
         self.sram = sram
+
+        self.r_port = r_port
+        self.w_port = w_port
+        self.rw_port = rw_port
+
+        global RW_PORT_NUM, R_PORT_NUM, W_PORT_NUM
+        RW_PORT_NUM = len(self.rw_port)
+        R_PORT_NUM = len(self.r_port)
+        W_PORT_NUM = len(self.w_port)
 
     def next_trace(self, current_trace, waiting_trace):
         """
@@ -47,7 +60,8 @@ class RM:
         self.current_trace.state = 'accessing'
         self.count_down = CLOCK_CYCLE * L2_ACCESS_LATENCY
 
-        print('Start accessing L2 Cache for the next {0} ticks'.format(self.count_down))
+        if VERBOSE:
+            print('Start accessing L2 Cache for the next {0} ticks'.format(self.count_down))
 
         self.waiting_trace.state = 'waiting'
 
@@ -69,7 +83,8 @@ class RM:
         shift_dis = dis
 
         if shift_dis == 0:
-            print('No need to shift')
+            if VERBOSE:
+                print('No need to shift')
             return 0
 
         if port_type == 'r':
@@ -87,7 +102,8 @@ class RM:
         self.current_trace.state = 'shifting'
         self.count_down = shift_dis * L2_SHIFT_LATENCY * CLOCK_CYCLE
 
-        print('Start shifting on Group{0} for the next {1} ticks'.format(g, self.count_down))
+        if VERBOSE:
+            print('Start shifting on Group{0} for the next {1} ticks'.format(g, self.count_down))
 
         return shift_dis
 
@@ -99,19 +115,20 @@ class RM:
         self.total_cycles += 1
         self.count_down -= CLOCK_CYCLE
 
-        print('Trace state: current({0}) next({1})'.format(self.current_trace.state, self.waiting_trace.state))
-
-        if self.count_down >= 0:
-            print('Count down:', self.count_down)
-        else:
-            print('Waiting for next instr')
+        if VERBOSE:
+            print('Trace state: current({0}) next({1})'.format(self.current_trace.state, self.waiting_trace.state))
+            if self.count_down >= 0:
+                print('Count down:', self.count_down)
+            else:
+                print('Waiting for next instr')
 
         if self.waiting_trace.instr != 'EOF' and tick > self.waiting_trace.start_tick:
             self.waiting_trace.state = 'ready'
 
         if self.count_down == 0:
             if self.current_trace.state == 'accessing':
-                print('L2 Cache accessed')
+                if VERBOSE:
+                    print('L2 Cache accessed')
 
                 self.current_trace.target_line_num = self.sram.compare_tag(self.current_trace.tag,
                                                                            self.current_trace.index, tick)
@@ -120,7 +137,8 @@ class RM:
                 target_group = target_line_num // TAPE_DOMAIN  # the group target is in
 
                 if target_line_num >= 0:  # hit
-                    print('L2 Cache Hit')
+                    if VERBOSE:
+                        print('L2 Cache Hit')
                     self.current_trace.hit = True
                     target_port = -1
                     port_type = 'undefined'
@@ -140,7 +158,6 @@ class RM:
                             for pos_k, k in zip(self.rw_port, range(RW_PORT_NUM)):
                                 # looking for the closest rw port
                                 d_k = abs(pos_k + self.offset[target_group] - target_group_line)
-                                print(pos_k, k, self.offset[target_group], target_group_line)
                                 if d_k < d:
                                     d = d_k
                                     target_port = k
@@ -174,12 +191,15 @@ class RM:
                         if self.current_trace.instr == 'r':
                             self.current_trace.state = 'reading'
                             self.count_down = CLOCK_CYCLE * L2_R_LATENCY
-                            print(
-                                'Current trace start reading from L2, it would take {0} ticks'.format(self.count_down))
+                            if VERBOSE:
+                                print('Current trace start reading from L2, it would take {0} ticks'.format(
+                                    self.count_down))
                         elif self.current_trace.instr == 'w':
                             self.current_trace.state = 'writing'
                             self.count_down = CLOCK_CYCLE * L2_W_LATENCY
-                            print('Current trace start writing in L2, it would take {0} ticks'.format(self.count_down))
+                            if VERBOSE:
+                                print('Current trace start writing in L2, it would take {0} ticks'.format(
+                                    self.count_down))
                         else:
                             print('Error: Unknown Instruction type:', self.current_trace.instr)
                 # end of if target_line_num >= 0
@@ -188,35 +208,45 @@ class RM:
                     self.current_trace.state = 'memory'
                     self.count_down = CLOCK_CYCLE * L2_MISS_PENALTY
                     self.miss_count += 1
-                    print('L2 Cache Miss, this would take {0} ticks'.format(self.count_down))
+                    if VERBOSE:
+                        print('L2 Cache Miss, this would take {0} ticks'.format(self.count_down))
             # end of if state == 'accessing'
             elif self.current_trace.state == 'shifting':
                 # after shifting, start reading/writing
-                print('Shift complete')
+                if VERBOSE:
+                    print('Shift complete')
                 if self.current_trace.instr == 'r':
                     self.current_trace.state = 'reading'
                     self.count_down = CLOCK_CYCLE * L2_R_LATENCY
-                    print('Current trace start reading from L2, it would take {0} ticks'.format(self.count_down))
+                    if VERBOSE:
+                        print('Current trace start reading from L2, it would take {0} ticks'.format(self.count_down))
                 elif self.current_trace.instr == 'w':
                     self.current_trace.state = 'writing'
                     self.count_down = CLOCK_CYCLE * L2_W_LATENCY
-                    print('Current trace start writing in L2, it would take {0} ticks'.format(self.count_down))
+                    if VERBOSE:
+                        print('Current trace start writing in L2, it would take {0} ticks'.format(self.count_down))
                 else:
                     print('Error: Unknown Instruction type:', self.current_trace.instr)
             elif self.current_trace.state == 'reading':
-                print('L2 reading complete')
+                if VERBOSE:
+                    print('L2 reading complete')
                 self.current_trace.state = 'finished'
-                print('Current trace finished\n')
+                if VERBOSE:
+                    print('Current trace finished\n')
             elif self.current_trace.state == 'writing':
-                print('L2 writing complete')
+                if VERBOSE:
+                    print('L2 writing complete')
                 self.current_trace.state = 'finished'
-                print('Current trace finished\n')
+                if VERBOSE:
+                    print('Current trace finished\n')
             elif self.current_trace.state == 'memory':
-                print('Main memory access complete')
+                if VERBOSE:
+                    print('Main memory access complete')
                 self.sram.update(self.current_trace.tag, self.current_trace.index, tick)
                 # for t, k in zip(self.sram.tags, range(len(self.sram.tags))):
                 # if t is not None:
-                #         print(t, k)
+                # print(t, k)
                 self.current_trace.state = 'finished'
-                print('Current trace finished\n')
+                if VERBOSE:
+                    print('Current trace finished\n')
                 # end of if count_down == 0

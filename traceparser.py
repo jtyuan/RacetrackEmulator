@@ -1,6 +1,6 @@
 __author__ = 'bilibili'
 
-from configs import OFFSET_BITS, SET_BITS
+from configs import OFFSET_BITS, SET_BITS, VERBOSE
 from trace import Trace
 
 
@@ -30,5 +30,6 @@ def __addr_parse(addr):
         tag = int(tag, 2)
     else:
         tag = 0
-    print('Instr tag:', bin(tag)[2:], 'index:', bin(index)[2:], 'offset:', bin(byte_offset)[2:])
+    if VERBOSE:
+        print('Instr tag:', bin(tag)[2:], 'index:', bin(index)[2:], 'offset:', bin(byte_offset)[2:])
     return tag, index, byte_offset

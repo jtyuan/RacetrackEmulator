@@ -40,13 +40,15 @@ class SRAM:
         :return: True if success
         """
         line = self.update_line_number(index)
-        print('SRAM updating with tag:{0} on line {1}'.format(tag, line))
+        if VERBOSE:
+            print('SRAM updating with tag:{0} on line {1}'.format(tag, line))
         if line < 0 or line >= self.line_num:
             return False
         self.tags[line] = tag
         self.valid[line] = True
         self.stamp[line] = tick
-        print('SRAM tag array updated')
+        if VERBOSE:
+            print('SRAM tag array updated')
         return True
 
     def update_line_number(self, index):

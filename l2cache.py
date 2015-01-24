@@ -11,6 +11,7 @@ from rm import RM
 
 class L2Cache:
     EOF = False
+    trace_count = 0
 
     def __init__(self, trace_file):
         """
@@ -22,11 +23,13 @@ class L2Cache:
         self.rm = RM(self.sram)
 
         print('Starting up')
-        print('\nCurrent tick: 0')
-        print('Trace state: current(unfetched) next(unfetched)\n')
+        if VERBOSE:
+            print('\nCurrent tick: 0')
+            print('Trace state: current(unfetched) next(unfetched)\n')
 
         self.current_trace = Trace()
-        print('Fetching the first trace')
+        if VERBOSE:
+            print('Fetching the first trace')
         self.waiting_trace = parse(self.trace_file.readline())
         self.next_trace()  # get 1st trace
         # set current_tick to one cycle before the first trace
@@ -38,7 +41,15 @@ class L2Cache:
         """
         next_trace() - start process next trace & pre fetch the 2nd next trace
         """
-        print('Start process waiting trace')
+
+        self.trace_count += 1
+        if VERBOSE:
+            print('Start process waiting trace')
+            print('Executing the {0}th trace'.format(self.trace_count))
+
+        if self.trace_count % 1000 == 0:
+            print('**Executing the {0}th trace**'.format(self.trace_count))
+
         self.current_trace = self.waiting_trace
 
         next_line = self.trace_file.readline()
@@ -48,7 +59,8 @@ class L2Cache:
             print('No more traces left')
             self.waiting_trace = Trace(instr='EOF')
         else:
-            print('Pre-fetching next trace')
+            if VERBOSE:
+                print('Pre-fetching next trace')
             self.waiting_trace = parse(next_line)
         self.rm.next_trace(self.current_trace, self.waiting_trace)
 
@@ -59,13 +71,14 @@ class L2Cache:
         """
         self.current_tick += CLOCK_CYCLE
 
-        print('\nCurrent tick:', self.current_tick)
+        if VERBOSE:
+            print('\nCurrent tick:', self.current_tick)
 
         self.rm.next_cycle(self.current_tick)
 
         if self.current_trace.state == 'finished' and self.EOF:
             print('\nEmulation Complete')
-            print('total cycles:', self.current_tick / CLOCK_CYCLE)
+            print('total cycles:', self.current_tick // CLOCK_CYCLE)
             print('total shifts:', self.rm.total_shifts)
             print('total shift distance:', self.rm.total_shift_dis)
             print('total access:', self.rm.access_count)
