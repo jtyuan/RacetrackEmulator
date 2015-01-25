@@ -103,21 +103,24 @@ if __name__ == "__main__":
     if args.verbose is True:
         Configs.VERBOSE = True
 
-    Configs.TRACE_DIR = args.directory
-
     if not args.directory:
         if not args.tracefile:
             print('error: the following arguments are required: trace-file')
         else:
+            print('Trace file:', args.tracefile)
             l2cache = L2Cache(args.tracefile)
             while True:
                 if not l2cache.next_cycle():
                     break
     else:
+        Configs.TRACE_DIR = args.directory
+        print('Trace dir:', Configs.TRACE_DIR)
         for trace in os.listdir(Configs.TRACE_DIR):
-            print('Trace File:', trace)
-            l2cache = L2Cache(os.path.join(Configs.TRACE_DIR, trace))
-            while True:
-                if not l2cache.next_cycle():
-                    break
+            if trace[-6:] == '.trace':
+                print('Trace File:', trace)
+                print(os.path.join(Configs.TRACE_DIR, trace))
+                l2cache = L2Cache(os.path.join(Configs.TRACE_DIR, trace))
+                while True:
+                    if not l2cache.next_cycle():
+                        break
 
