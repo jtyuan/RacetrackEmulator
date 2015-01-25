@@ -58,6 +58,7 @@ def add_arguments(parser):
                         choices=('con', 'way'),
                         help='Set partitioning policy, "con" for continues, use "way" to '
                              'divide sets into different ways')
+    parser.add_argument('-pre', '--preshift', action='store_true', help='Enable preshift for next i/o instr')
     parser.add_argument('-v', '--verbose', action='store_true', help='Verbose mode, show debug info')
 
 
@@ -103,6 +104,9 @@ if __name__ == "__main__":
     Configs.PORT_SELECTION = args.port_selection
     Configs.PORT_UPDATE_POLICY = args.port_update_policy
     Configs.SET_PARTITION = args.set_partition
+
+    if args.preshift:
+        Configs.PRESHIFT = True
 
     if args.output:
         Configs.OUTPUT = True

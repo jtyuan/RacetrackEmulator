@@ -39,6 +39,7 @@ class Configs:
     PORT_SELECTION = 'dynamic'   # static - move to given port; dynamic - move to nearest port
     PORT_UPDATE_POLICY = 'lazy'  # eager - move back to fixed position after r/w; lazy - stay where the last r/w happens
     SET_PARTITION = 'con'  # con - continuous, way - separate by ways
+    PRESHIFT = False
 
     REPLACE_POLICY = 'LRU'
 
@@ -91,6 +92,7 @@ class Configs:
         print('  Port Selection:', Configs.PORT_SELECTION)
         print('  Set Partition:', Configs.SET_PARTITION)
         print('  Replace Policy:', Configs.REPLACE_POLICY)
+        print('  Preshift:', Configs.PRESHIFT)
         print('  Verbose mode:', Configs.VERBOSE)
         print('-----------------------------\n')
         
@@ -106,6 +108,7 @@ class Configs:
             Configs.OUT_FILE.write('  Port Selection: {0}\n'.format(Configs.PORT_SELECTION))
             Configs.OUT_FILE.write('  Set Partition: {0}\n'.format(Configs.SET_PARTITION))
             Configs.OUT_FILE.write('  Replace Policy: {0}\n'.format(Configs.REPLACE_POLICY))
+            Configs.OUT_FILE.write('  Preshift: {0}\n'.format(Configs.PRESHIFT))
             Configs.OUT_FILE.write('  Verbose mode: {0}\n'.format(Configs.VERBOSE))
             Configs.OUT_FILE.write('-----------------------------\n')
             

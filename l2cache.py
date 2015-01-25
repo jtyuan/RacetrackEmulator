@@ -123,9 +123,6 @@ class L2Cache:
         if self.current_trace.state == 'finished' and self.waiting_trace.state == 'ready':
             self.next_trace()
 
-        if self.waiting_trace.state != 'ready':
-            # TODO pre-fetch logic
-            dummy = 1
         return True
 
     def boost_cycle(self, num=1000):

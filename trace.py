@@ -22,6 +22,11 @@ class Trace:
         self.index = parsed_addr[1]
         self.offset = parsed_addr[2]
         self.start_tick = tick
+
         self.state = 'waiting'
         self.hit = False
         self.target_line_num = -1
+        self.target_group = 0
+        self.preshift_state = 'idle'
+        self.access_count_down = 0  # for preshift
+        self.shift_count_down = 0   # for preshift

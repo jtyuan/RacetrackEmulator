@@ -82,22 +82,51 @@ class RM:
         :param current_trace: the trace to be processed immediately
         :param waiting_trace: the trace to be processed after current trace finishes
         """
+
         self.current_trace = current_trace
         self.waiting_trace = waiting_trace
 
-        self.current_trace.state = 'accessing'
-        self.count_down = Configs.CLOCK_CYCLE * Configs.L2_ACCESS_LATENCY
+        if Configs.PRESHIFT is False or self.current_trace.preshift_state == 'idle':
+            # the current_trace now was not preshifted before
+            self.current_trace.state = 'accessing'
+            self.count_down = Configs.CLOCK_CYCLE * Configs.L2_ACCESS_LATENCY
 
-        if Configs.VERBOSE:
-            if Configs.OUTPUT:
-                Configs.OUT_FILE.write('Start accessing L2 Cache for the next {0} ticks\n'.format(self.count_down))
-            print('Start accessing L2 Cache for the next {0} ticks'.format(self.count_down))
+            if Configs.VERBOSE:
+                if Configs.OUTPUT:
+                    Configs.OUT_FILE.write('Start accessing L2 Cache for the next {0} ticks\n'.format(self.count_down))
+                print('Start accessing L2 Cache for the next {0} ticks'.format(self.count_down))
 
-        self.waiting_trace.state = 'waiting'
+            self.waiting_trace.state = 'waiting'
+        # else the current_trace now was preshifted
+        elif self.current_trace.preshift_state == 'accessing':
+            self.current_trace.state = 'accessing'
+            self.count_down = self.current_trace.access_count_down
+            if Configs.VERBOSE:
+                if Configs.OUTPUT:
+                    Configs.OUT_FILE.write(
+                        '[PRESHIFT]Continue accessing L2 Cache for the next {0} ticks\n'.format(self.count_down))
+                print('[PRESHIFT]Continue accessing L2 Cache for the next {0} ticks'.format(self.count_down))
+        elif self.current_trace.preshift_state == 'shifting':
+            self.current_trace.state = 'shifting'
+            self.count_down = self.current_trace.shift_count_down
+            if Configs.VERBOSE:
+                if Configs.OUTPUT:
+                    Configs.OUT_FILE.write(
+                        '[PRESHIFT]Continue shifting for the next {0} ticks\n'.format(self.count_down))
+                print('[PRESHIFT]Continue shifting for the next {0} ticks'.format(self.count_down))
+        elif self.current_trace.preshift_state == 'shifted':
+            # done shifting already in preshift, ready to read/write
+            self.current_trace.state = 'shifting'
+            self.count_down = Configs.CLOCK_CYCLE
+            if Configs.VERBOSE:
+                if Configs.OUTPUT:
+                    Configs.OUT_FILE.write(
+                        '[PRESHIFT]Preshifted, ready to do I/O\n')
+                print('[PRESHIFT]Preshifted, ready to do I/O\n')
 
         self.access_count += 1
 
-    def shift(self, port_type, target_port, target_group, target_group_line, dis):
+    def shift(self, port_type, target_port, target_group, target_group_line, dis, preshift=False):
         """
         shift(port_type, target_port, target_group ,target_group_line, dis) - shift a group of tapes to target line
         :param port_type: the type of port to be used ('r', 'w', 'rw')
@@ -107,6 +136,7 @@ class RM:
         :param dis: the distance to shift
         :return: the distance to shift
         """
+
         g = target_group
         p = target_port
 
@@ -155,15 +185,191 @@ class RM:
         self.total_shifts += 1
         self.total_shift_dis += shift_dis
 
-        self.current_trace.state = 'shifting'
-        self.count_down = shift_dis * Configs.L2_SHIFT_LATENCY * Configs.CLOCK_CYCLE
+        if preshift:
+            self.waiting_trace.preshift_state = 'accessing'
+            self.waiting_trace.access_count_down = Configs.L2_ACCESS_LATENCY * Configs.CLOCK_CYCLE
+            self.waiting_trace.shift_count_down = shift_dis * Configs.L2_SHIFT_LATENCY * Configs.CLOCK_CYCLE
+            if Configs.VERBOSE:
+                if Configs.OUTPUT:
+                    Configs.OUT_FILE.write(
+                        '[PRESHIFT]Start preshifting on Group{0} for the next {1} ticks\n'.format(g,
+                                                                                                  self.waiting_trace.shift_count_down))
+                print('[PRESHIFT]Start preshifting on Group{0} for the next {1} ticks'.format(g,
+                                                                                              self.waiting_trace.shift_count_down))
+        else:
+            self.current_trace.state = 'shifting'
+            self.count_down = shift_dis * Configs.L2_SHIFT_LATENCY * Configs.CLOCK_CYCLE
 
-        if Configs.VERBOSE:
-            if Configs.OUTPUT:
-                Configs.OUT_FILE.write('Start shifting on Group{0} for the next {1} ticks\n'.format(g, self.count_down))
-            print('Start shifting on Group{0} for the next {1} ticks'.format(g, self.count_down))
+            if Configs.VERBOSE:
+                if Configs.OUTPUT:
+                    Configs.OUT_FILE.write(
+                        'Start shifting on Group{0} for the next {1} ticks\n'.format(g, self.count_down))
+                print('Start shifting on Group{0} for the next {1} ticks'.format(g, self.count_down))
 
         return shift_dis
+
+    def preshift(self, tick):
+        self.waiting_trace.target_line_num = self.sram.compare_tag(self.waiting_trace.tag, self.waiting_trace.index,
+                                                                   tick)
+        target_line_num = self.waiting_trace.target_line_num
+        target_group_line = target_line_num % Configs.TAPE_DOMAIN  # target line # in a group
+        target_group = target_line_num // Configs.TAPE_DOMAIN  # the group target is in
+
+        self.waiting_trace.target_group = target_group
+
+        if self.waiting_trace.target_group == self.current_trace.target_group:
+            # cannot preshift if in same group as current i/o trace
+            if Configs.VERBOSE:
+                if Configs.OUTPUT:
+                    Configs.OUT_FILE.write(
+                        '[PRESHIFT]Waiting i/o is in the same group as current i/o, cannot preshift\n')
+                print('[PRESHIFT]Waiting i/o is in the same group as current i/o, cannot preshift')
+            return
+
+        if target_line_num >= 0:  # hit
+            if Configs.VERBOSE:
+                if Configs.OUTPUT:
+                    Configs.OUT_FILE.write('[PRESHIFT]L2 Cache Hit\n')
+                print('[PRESHIFT]L2 Cache Hit')
+            self.current_trace.hit = True
+            target_port = -1
+            port_type = 'undefined'
+            d = Configs.TAPE_LENGTH
+            if self.current_trace.instr == 'r':
+                # if current instr is read, to find closest read port or rw port
+                if R_PORT_NUM > 0:
+                    if Configs.PORT_SELECTION == 'dynamic':
+                        for pos_k, k in zip(self.r_port, range(R_PORT_NUM)):
+                            # looking for the closest read port
+                            d_k = abs(pos_k + self.offset[target_group] - target_group_line)
+                            if d_k < d:
+                                d = d_k
+                                target_port = k
+                                port_type = 'r'
+                    elif Configs.PORT_SELECTION == 'static':
+                        for pos_k, k in zip(self.r_port, range(R_PORT_NUM)):
+                            if pos_k <= target_group_line <= R_PORT_SIZE + pos_k:
+                                d = abs(pos_k + self.offset[target_group] - target_group_line)
+                                target_port = k
+                                port_type = 'r'
+                                break
+                    else:
+                        print('[PRESHIFT]error: undefined port selection policy')
+                        exit()
+                if RW_PORT_NUM > 0:  # if there is rw port
+                    if Configs.PORT_SELECTION == 'dynamic':
+                        for pos_k, k in zip(self.rw_port, range(RW_PORT_NUM)):
+                            # looking for the closest rw port
+                            d_k = abs(pos_k + self.offset[target_group] - target_group_line)
+                            if d_k < d:
+                                d = d_k
+                                target_port = k
+                                port_type = 'rw'
+                    elif Configs.PORT_SELECTION == 'static':
+                        for pos_k, k in zip(self.rw_port, range(RW_PORT_NUM)):
+                            if pos_k <= target_group_line <= RW_PORT_SIZE + pos_k:
+                                d = abs(pos_k + self.offset[target_group] - target_group_line)
+                                target_port = k
+                                port_type = 'rw'
+                                break
+                    else:
+                        print('[PRESHIFT]error: undefined port selection policy')
+                        exit()
+                if Configs.PORT_SELECTION == 'static' and port_type == 'undefined':
+                    # haven't found a port in corresponding area
+                    if R_PORT_NUM > 0:
+                        if target_line_num < Configs.TAPE_DOMAIN // 2:
+                            # target is in the 1st half of the group
+                            d = abs(self.r_port[0] + self.offset[target_group] - target_group_line)
+                            target_port = 0
+                            port_type = 'r'
+                        else:
+                            target_port = int((R_PORT_NUM + 0.5) // 2)
+                            d = abs(self.r_port[target_port] + self.offset[target_group] - target_group_line)
+                            port_type = 'r'
+                    elif RW_PORT_NUM > 0:
+                        if target_line_num < Configs.TAPE_DOMAIN // 2:
+                            # target is in the 1st half of the group
+                            d = abs(self.rw_port[0] + self.offset[target_group] - target_group_line)
+                            target_port = 0
+                            port_type = 'rw'
+                        else:
+                            target_port = int((RW_PORT_NUM + 0.5) // 2)
+                            d = abs(self.rw_port[target_port] + self.offset[target_group] - target_group_line)
+                            port_type = 'rw'
+                    else:
+                        print('[PRESHIFT]error: cannot find a port to write')
+                        exit()
+                self.shift(port_type, target_port, target_group, target_group_line, d, preshift=True)
+            elif self.current_trace.instr == 'w':
+                # if current instr is write, to find closest write port or rw port
+                if W_PORT_NUM > 0:
+                    if Configs.PORT_SELECTION == 'dynamic':
+                        for pos_k, k in zip(self.w_port, range(W_PORT_NUM)):
+                            # looking for the closest write port
+                            d_k = abs(pos_k + self.offset[target_group] - target_group_line)
+                            if d_k < d:
+                                d = d_k
+                                target_port = k
+                                port_type = 'w'
+                    elif Configs.PORT_SELECTION == 'static':
+                        for pos_k, k in zip(self.w_port, range(W_PORT_NUM)):
+                            if pos_k <= target_group_line <= W_PORT_SIZE + pos_k:
+                                d = abs(pos_k + self.offset[target_group] - target_group_line)
+                                target_port = k
+                                port_type = 'w'
+                                break
+                    else:
+                        print('[PRESHIFT]error: undefined port selection policy')
+                        exit()
+                if RW_PORT_NUM > 0:  # if there is rw port
+                    if Configs.PORT_SELECTION == 'dynamic':
+                        for pos_k, k in zip(self.rw_port, range(RW_PORT_NUM)):
+                            # looking for the closest rw port
+                            d_k = abs(pos_k + self.offset[target_group] - target_group_line)
+                            if d_k < d:
+                                d = d_k
+                                target_port = k
+                                port_type = 'rw'
+                    elif Configs.PORT_SELECTION == 'static':
+                        for pos_k, k in zip(self.rw_port, range(RW_PORT_NUM)):
+                            if pos_k <= target_group_line <= RW_PORT_SIZE + pos_k:
+                                d = abs(pos_k + self.offset[target_group] - target_group_line)
+                                target_port = k
+                                port_type = 'rw'
+                                break
+                    else:
+                        print('[PRESHIFT]error: undefined port selection policy')
+                        exit()
+                if Configs.PORT_SELECTION == 'static' and port_type == 'undefined':
+                    # haven't found a port in corresponding area
+                    if W_PORT_NUM > 0:
+                        if target_line_num < Configs.TAPE_DOMAIN // 2:
+                            # target is in the 1st half of the group
+                            d = abs(self.w_port[0] + self.offset[target_group] - target_group_line)
+                            target_port = 0
+                            port_type = 'w'
+                        else:
+                            target_port = int((W_PORT_NUM + 0.5) // 2)
+                            d = abs(self.w_port[target_port] + self.offset[target_group] - target_group_line)
+                            port_type = 'w'
+                    elif RW_PORT_NUM > 0:
+                        if target_line_num < Configs.TAPE_DOMAIN // 2:
+                            # target is in the 1st half of the group
+                            d = abs(self.rw_port[0] + self.offset[target_group] - target_group_line)
+                            target_port = 0
+                            port_type = 'rw'
+                        else:
+                            target_port = int((RW_PORT_NUM + 0.5) // 2)
+                            d = abs(self.rw_port[target_port] + self.offset[target_group] - target_group_line)
+                            port_type = 'rw'
+                    else:
+                        print('[PRESHIFT]error: cannot find a port to write')
+                        exit()
+                self.shift(port_type, target_port, target_group, target_group_line, d, preshift=True)
+            else:
+                print('[PRESHIFT]error: unknown instruction type:', self.current_trace.instr)
+                exit()
 
     def next_cycle(self, tick):
         """
@@ -173,11 +379,28 @@ class RM:
         self.total_cycles += 1
         self.count_down -= Configs.CLOCK_CYCLE
 
+        if Configs.PRESHIFT:
+            if self.waiting_trace.preshift_state == 'accessing':
+                # Before preshifting, must first access L2 Cache for 6(default) cycles
+                self.waiting_trace.access_count_down -= Configs.CLOCK_CYCLE
+                if self.waiting_trace.access_count_down == 0:
+                    # start preshifting after L2 Cache access
+                    self.waiting_trace.preshift_state = 'shifting'
+            elif self.waiting_trace.preshift_state == 'shifting':
+                # Preshifting
+                self.waiting_trace.shift_count_down -= Configs.CLOCK_CYCLE
+                if self.waiting_trace.shift_count_down == 0:
+                    self.waiting_trace.preshift_state = 'shifted'
+
         if Configs.VERBOSE:
             if Configs.OUTPUT:
                 Configs.OUT_FILE.write(
-                    'Trace state: current({0}) next({1})\n'.format(self.current_trace.state, self.waiting_trace.state))
-            print('Trace state: current({0}) next({1})'.format(self.current_trace.state, self.waiting_trace.state))
+                    'Trace state: current({0}) next({1}({2}))\n'.format(self.current_trace.state,
+                                                                        self.waiting_trace.state,
+                                                                        self.waiting_trace.preshift_state))
+            print('Trace state: current({0}) next({1}({2}))'.format(self.current_trace.state,
+                                                                    self.waiting_trace.state,
+                                                                    self.waiting_trace.preshift_state))
             if self.count_down >= 0:
                 if Configs.OUTPUT:
                     Configs.OUT_FILE.write('Count down: {0}\n'.format(self.count_down))
@@ -187,8 +410,28 @@ class RM:
                     Configs.OUT_FILE.write('Waiting for next instr\n')
                 print('Waiting for next instr')
 
-        if self.waiting_trace.instr != 'EOF' and tick > self.waiting_trace.start_tick:
+            if Configs.PRESHIFT:
+                if self.waiting_trace.preshift_state == 'shifting':
+                    if Configs.OUTPUT:
+                        Configs.OUT_FILE.write(
+                            '[PRESHIFT]Preshift count down: {0}\n'.format(self.waiting_trace.shift_count_down))
+                    print('[PRESHIFT]Preshift count down: {0}'.format(self.waiting_trace.shift_count_down))
+                elif self.waiting_trace.preshift_state == 'shifted':
+                    if Configs.OUTPUT:
+                        Configs.OUT_FILE.write('[PRESHIFT]Preshift complete\n')
+                    print('[PRESHIFT]Preshift complete')
+                elif self.waiting_trace.preshift_state == 'accessing':
+                    if Configs.OUTPUT:
+                        Configs.OUT_FILE.write('[PRESHIFT]Accessing L2 Cache: {0} ticks remains\n'.format(
+                            self.waiting_trace.access_count_down))
+                    print('[PRESHIFT]Accessing L2 Cache: {0} ticks remains'.format(
+                            self.waiting_trace.access_count_down))
+
+        if self.waiting_trace.instr != 'EOF' and tick > self.waiting_trace.start_tick \
+                and self.waiting_trace.state != 'ready':
             self.waiting_trace.state = 'ready'
+            if Configs.PRESHIFT:  # preshift logic
+                self.preshift(tick)
 
         if self.count_down == 0:
             if self.current_trace.state == 'accessing':
@@ -202,6 +445,8 @@ class RM:
                 target_line_num = self.current_trace.target_line_num
                 target_group_line = target_line_num % Configs.TAPE_DOMAIN  # target line # in a group
                 target_group = target_line_num // Configs.TAPE_DOMAIN  # the group target is in
+
+                self.current_trace.target_group = target_group
 
                 if target_line_num >= 0:  # hit
                     if Configs.VERBOSE:
