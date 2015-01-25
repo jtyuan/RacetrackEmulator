@@ -80,8 +80,8 @@ class SRAM:
             # a replacement occurred
             if Configs.VERBOSE:
                 print('Line {0} in L2 Cache is replaced'.format(best))
-            if self.dirty[best] is True:
-                print('This block is dirty, write back to next memory level')
+                if self.dirty[best] is True:
+                    print('This block is dirty, write back to next memory level')
 
         return best
 
@@ -118,5 +118,5 @@ class SRAM:
             for i in range(Configs.L2_ASSOC):
                 yield Configs.SET_NUM * i + index
         else:
-            print('Error: undefined set partitioning policy')
+            print('error: undefined set partitioning policy')
             exit()

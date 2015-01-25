@@ -52,7 +52,7 @@ class RM:
         if Configs.PORT_MODE == 'rw':
             self.r_port = []
             self.w_port = []
-            self.rw_port = [0, 16, 32, 48]
+            self.rw_port = [0, 13, 26, 39, 52]
         elif Configs.PORT_MODE == 'rw+r':
             self.rw_port = [0, 32]
             self.w_port = []
@@ -61,10 +61,10 @@ class RM:
             self.rw_port = []
             self.w_port = [0, 32]
             self.r_port = [8, 12, 16, 20, 24, 28, 40, 44, 48, 52, 56, 60]
-        else:
+        else:  # baseline
             self.r_port = []
             self.w_port = []
-            self.rw_port = []
+            self.rw_port = [0, 16, 32, 48]
 
         global RW_PORT_NUM, R_PORT_NUM, W_PORT_NUM
         RW_PORT_NUM = len(self.rw_port)
@@ -117,7 +117,7 @@ class RM:
         elif port_type == 'rw':
             self.offset[g] = target_group_line - self.rw_port[p]
         else:
-            print('Error: Unknown Port Type:', port_type)
+            print('error: Unknown Port Type:', port_type)
             exit()
 
         self.total_shifts += 1
@@ -186,7 +186,7 @@ class RM:
                                         port_type = 'r'
                                         break
                             else:
-                                print('Error: undefined port selection policy')
+                                print('error: undefined port selection policy')
                                 exit()
                         if RW_PORT_NUM > 0:  # if there is rw port
                             if Configs.PORT_SELECTION == 'dynamic':
@@ -205,7 +205,7 @@ class RM:
                                         port_type = 'rw'
                                         break
                             else:
-                                print('Error: undefined port selection policy')
+                                print('error: undefined port selection policy')
                                 exit()
                         if Configs.PORT_MODE == 'w+r' and Configs.PORT_SELECTION == 'static' \
                                 and port_type == 'undefined':
@@ -240,7 +240,7 @@ class RM:
                                         port_type = 'w'
                                         break
                             else:
-                                print('Error: undefined port selection policy')
+                                print('error: undefined port selection policy')
                                 exit()
                         if RW_PORT_NUM > 0:  # if there is rw port
                             if Configs.PORT_SELECTION == 'dynamic':
@@ -259,7 +259,7 @@ class RM:
                                         port_type = 'rw'
                                         break
                             else:
-                                print('Error: undefined port selection policy')
+                                print('error: undefined port selection policy')
                                 exit()
                         if Configs.PORT_MODE != 'rw' and Configs.PORT_SELECTION == 'static' \
                                 and port_type == 'undefined':
@@ -287,7 +287,7 @@ class RM:
 
                         self.shift(port_type, target_port, target_group, target_group_line, d)
                     else:
-                        print('Error: Unknown Instruction type:', self.current_trace.instr)
+                        print('error: Unknown Instruction type:', self.current_trace.instr)
                         exit()
                     if d == 0:  # don't need shift
                         if self.current_trace.instr == 'r':
@@ -303,7 +303,7 @@ class RM:
                                 print('Current trace start writing in L2, it would take {0} ticks'.format(
                                     self.count_down))
                         else:
-                            print('Error: Unknown Instruction type:', self.current_trace.instr)
+                            print('error: Unknown Instruction type:', self.current_trace.instr)
                             exit()
                 # end of if target_line_num >= 0
                 else:  # failed to find a matched tag in SRAM, miss
@@ -329,7 +329,7 @@ class RM:
                     if Configs.VERBOSE:
                         print('Current trace start writing in L2, it would take {0} ticks'.format(self.count_down))
                 else:
-                    print('Error: Unknown Instruction type:', self.current_trace.instr)
+                    print('error: Unknown Instruction type:', self.current_trace.instr)
                     exit()
             elif self.current_trace.state == 'reading':
                 if Configs.VERBOSE:

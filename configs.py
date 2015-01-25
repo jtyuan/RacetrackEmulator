@@ -35,10 +35,14 @@ class Configs:
     SET_BITS = int(math.log2(SET_NUM))  # # of bits that set index takes in an address
     TAG_BITS = int(math.log2(ADDRESS_BITS) - SET_BITS - OFFSET_BITS)  # # of bits that tag takes in an address
 
-    PORT_MODE = 'rw'  # rw - only rw ports; rw+r - rw ports and r ports; w+r - w ports and r ports
+    PORT_MODE = 'baseline'  # rw - only rw ports; rw+r - rw ports and r ports; w+r - w ports and r ports
     PORT_SELECTION = 'dynamic'   # static - move to given port; dynamic - move to nearest port
     # PORT_UPDATE_POLICY = 'lazy'  # eager - move back to fixed position after r/w; lazy - stay where the last r/w happens
     SET_PARTITION = 'con'  # con - continuous, way - separate by ways
+
+    REPLACE_POLICY = 'LRU'
+
+    TRACE_DIR = 'trace'
 
     VERBOSE = False
 
@@ -67,7 +71,10 @@ class Configs:
         print('  L2 Access Latency:', Configs.L2_ACCESS_LATENCY)
         print('  L2 Shift Latency:', Configs.L2_SHIFT_LATENCY)
         print('  L2 Miss Penalty:', Configs.L2_MISS_PENALTY)
-        print('  Port Mode:', Configs.PORT_MODE)
+        print('  Port Placement Mode:', Configs.PORT_MODE)
+        print('  Port Selection:', Configs.PORT_SELECTION)
+        print('  Set Partition:', Configs.SET_PARTITION)
+        print('  Replace Policy:', Configs.REPLACE_POLICY)
         print('  Verbose mode:', Configs.VERBOSE)
         print('-----------------------------\n')
 

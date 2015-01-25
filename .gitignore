@@ -52,6 +52,3 @@ docs/_build/
 
 # PyBuilder
 target/
-
-# Trace files
-trace/

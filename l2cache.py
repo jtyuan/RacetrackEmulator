@@ -55,7 +55,7 @@ class L2Cache:
             print('Start process waiting trace')
             print('Executing the {0}th trace'.format(self.trace_count))
 
-        if self.trace_count % 1000 == 0:
+        if self.trace_count % 100000 == 0:
             print('**Executing the {0}th trace**'.format(self.trace_count))
 
         self.current_trace = self.waiting_trace
