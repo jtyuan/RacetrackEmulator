@@ -1,5 +1,5 @@
 # RacetrackEmulator
-
+```
 usage: python3 racetrack.zip [-h] [-t TRACEFILE] [-d dir] [-o outfile]
                  			       [--cpu-clock CPU_CLOCK] [--clock-cycle CLOCK_CYCLE]
                    			     [--tape-domain TAPE_DOMAIN] [--tape-length TAPE_LENGTH]
@@ -83,4 +83,4 @@ optional arguments:
   
   或者解压出来之后，
   ./__main__.py -pm 'w+r+r' -ps 'dynamic' -pp 'lazy' -sp 'way' -pre -t trace/462.libquantum.trace
-
+```
