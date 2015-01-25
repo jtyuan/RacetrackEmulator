@@ -1,111 +1,86 @@
 # RacetrackEmulator
 
-## Basic Design
+usage: python3 racetrack.zip [-h] [-t TRACEFILE] [-d dir] [-o outfile]
+                 			       [--cpu-clock CPU_CLOCK] [--clock-cycle CLOCK_CYCLE]
+                   			     [--tape-domain TAPE_DOMAIN] [--tape-length TAPE_LENGTH]
+                 			       [--group-tape GROUP_TAPE] [--l2-size L2_SIZE]
+                 			       [--l2-assoc L2_ASSOC] [--l2-r-latency L2_R_LATENCY]
+                 			       [--l2-w-latency L2_W_LATENCY]
+                 			       [--l2-access-latency L2_ACCESS_LATENCY]
+                 			       [--l2-shift-latency L2_SHIFT_LATENCY]
+                 			       [--l2-miss-penalty L2_MISS_PENALTY]
+                 			       [-pm {baseline,rw,w+r,rw+r,rw+w+r,w+r+r}]
+                 			       [-ps {dynamic,static}] [-pp {lazy,eager}] [-sp {con,way}]
+                 			       [-pre] [-I MAXINSTS] [-V]
 
-1. functional module
-1.1 trace parser
-1.2 SRAM (Tag & valid)
-1.2.1 Tag locator
-1.2.2 Tag comparator 
-1.3 Racetrack Memory (Data)
-1.3.1 Datablock locator
-1.3.2 Datablock getter
-1.4 results analysis (Statistical)
+optional arguments:
+  -h, --help            show help message and exit
+  -t TRACEFILE, --tracefile TRACEFILE
+                        The trace file to emulate with, this argument will be
+                        ignored is --directory is added
+  -d dir, --directory dir
+                        Emulate all trace files in the given directory, enable
+                        this will ignore trace-file argument
+  -o outfile, --output outfile
+                        The file path to write emulation information to. Add
+                        -v to save the whole emulation detail.
+  --cpu-clock CPU_CLOCK
+                        Clock for blocks running at CPU speed(default="2GHz")
+  --clock-cycle CLOCK_CYCLE
+                        Ticks to run in one cycle(default=1000)
+  --tape-domain TAPE_DOMAIN
+                        The domain# in one tape(default=64)
+  --tape-length TAPE_LENGTH
+                        The spacial length of each tape(default=80)
+  --group-tape GROUP_TAPE
+                        The tape# in one group(default=512)
+  --l2-size L2_SIZE     The size of L2 Cache(default=4MB)
+  --l2-assoc L2_ASSOC   The associativity of L2 Cache(default=8)
+  --l2-r-latency L2_R_LATENCY
+                        The read latency (cycle) of L2 Cache(default=1)
+  --l2-w-latency L2_W_LATENCY
+                        The write latency (cycle) of L2 Cache(default=1)
+  --l2-access-latency L2_ACCESS_LATENCY
+                        The assess latency (cycle) of L2 Cache(default=6)
+  --l2-shift-latency L2_SHIFT_LATENCY
+                        The shift latency (cycle) of L2 Cache
+                        RacetrackMemory(default=1)
+  --l2-miss-penalty L2_MISS_PENALTY
+                        The penalty (cycle) when a L2 Cache miss
+                        occurs(default=100)
+  -pm {baseline,rw,w+r,rw+r,rw+w+r,w+r+r}, --port-mode {baseline,rw,w+r,rw+r,rw+w+r,w+r+r}
+                        Determine how the r/w ports are placed on a tape
+  -ps {dynamic,static}, --port-selection {dynamic,static}
+                        Port selection policy for every r/w instr
+  -pp {lazy,eager}, --port-update-policy {lazy,eager}
+                        The tape will remain where it is or move to default
+                        place after r/w operation
+  -sp {con,way}, --set_partition {con,way}
+                        Set partitioning policy, "con" for continuous, use
+                        "way" to divide sets into different ways
+  -pre, --preshift      Enable preshift for next i/o instr
+  -I MAXINSTS, --maxinsts MAXINSTS
+                        Total number of traces to emulate (default: run
+                        forever)
+  -V, --verbose         Verbose mode, show debug info
 
-2. architecture module
-2.1 SRAM (store as an Array)
-2.2 Racetrace Memory 
+其中与报告中的几种策略相关的有
 
-Procedure of emulator:
+  -pm {baseline,rw,w+r,rw+r,rw+w+r,w+r+r}, --port-mode {baseline,rw,w+r,rw+r,rw+w+r,w+r+r}
+                        对应报告中的端口摆放策略，rw对应5RW, w+r对应2W+12R, rw+r对应2RW+10R,
+                        rw+w+r对应2RW+2W+6R, w+r+r对应4W+8R
+  -ps {dynamic,static}, --port-selection {dynamic,static}
+                        对应报告中的端口选择策略
+  -pp {lazy,eager}, --port-update-policy {lazy,eager}
+                        对应报告中的端口移动策略
+  -sp {con,way}, --set_partition {con,way}
+                        对应报告中的Set划分策略, "con"代表continuous,
+                        "way"代表corss-way
+  -pre, --preshift      对应报告中的Preshift策略
 
-1. fetch instr (MemControl)
-2. decode (TraceParser)
-3. find corresponding tag&valid in SRAM
-4. if no (matched tag & valid) **return** miss
-5. else, find data in Racetrack Memory
-6. calculate shift latency, and **return** hit, data & latency
+使用例子：
+  python3 ./racetrack.zip -pm 'w+r+r' -ps 'dynamic' -pp 'lazy' -sp 'way' -pre -t trace/462.libquantum.trace
+  
+  或者解压出来之后，
+  ./__main__.py -pm 'w+r+r' -ps 'dynamic' -pp 'lazy' -sp 'way' -pre -t trace/462.libquantum.trace
 
-## Class Design:
-
-```cpp
-class Configs {
-	l2_size
-	l2_assoc
-	l2_io_latency = 1
-	l2_access_latency = 6
-	cpu_clock = 2GHz
-	clock_cycle = 1000tick(or 3000)
-}
-```
-
-```cpp
-class MemControl {
-Methods:
-	MemControl(trace_path);
-
-	trace fetchNext();
-	TraceParser decode(trace);
-	(hit_or_miss, target_line_num) checkInSRAM(tag, index);
-	(data, shift_num) fetchFromRM(target_line_num);
-	void resultProcess(hit_or_miss, data, shift_num);
-}
-
-```
-
-
-```cpp
-class TraceParser {
-Methods:
-	TraceParser(trace);
-	getTag();
-	getIndex();
-	getByteOffset();
-Members:
-	int64_t tag;
-}
-```
-
-```cpp
-class SRAM {
-Methods:
-	SRAM(l2_size);
-
-	(boolean, int64_t) compareTag(tag, index); // return the target_line_number which is valid and where tag is matched
-Members:
-	int64_t tags[line_num];
-	boolean valid[line_num];
-}
-```
-
-```cpp
-typedef Set int64_t[set_line_num][group_tape/64];
-```
-```cpp
-class RacetrackMemory {
-Methods:
-	RacetrackMemory(l2_size, tape_domain, group_tape, pos[]...);
-	Set getSet(index); // could be useful
-	int64_t getData(index, target_line_number) ;
-	// matched_pos is fetched from SRAM, 
-	// returns boolean(hit/miss), int64_t(result data)
-	
-	int64_t shift(target_line_num); // return shift distance
-Members:
-	int16_t[group_num] offset; // offset for each group
-	int64_t[line_num][group_tape/64] data;
-
-Attributes:
-	mem_size = l2_size;
-	tape_domain = 64; // # of domains on a tape
-	group_tape = 512; // # of tapes in a group
-	group_num = mem_size / (group_tape * tape_domain);
-	line_num = group_num * tape_domain;
-	set_line_num = l2_assoc;
-	wr_port_size = 12;
-	w_port_size = 8;
-	r_port_size = 4;
-
-	int16_t port_pos[num_of_port];
-}
-```
-> Written with [StackEdit](https://stackedit.io/).
