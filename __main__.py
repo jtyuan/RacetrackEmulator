@@ -44,7 +44,7 @@ def add_arguments(parser):
     parser.add_argument('--l2-miss-penalty', action='store', type=int, default=100,
                         help='The penalty (cycle) when a L2 Cache miss occurs(default=100)')
     parser.add_argument('-pm', '--port-mode', action='store', type=str, default='baseline',
-                        choices=('baseline', 'rw', 'w+r', 'rw+r', 'rw+w+r'),
+                        choices=('baseline', 'rw', 'w+r', 'rw+r', 'rw+w+r', 'w+r+r'),
                         help='Determine how the r/w ports are placed on a tape')
     parser.add_argument('-ps', '--port-selection', action='store', type=str, default='dynamic',
                         choices=('dynamic"', 'static'),

@@ -62,7 +62,10 @@ class RM:
             self.rw_port = [0, 32]
             self.w_port = [12, 44]
             self.r_port = [20, 24, 28, 52, 56, 60]
-
+        elif Configs.PORT_MODE == 'w+r+r':
+            self.rw_port = []
+            self.w_port = [0, 16, 32, 48]
+            self.r_port = [8, 12, 24, 28, 40, 44, 56, 60]
         else:  # baseline
             self.r_port = []
             self.w_port = []
