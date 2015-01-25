@@ -11,14 +11,16 @@ from rm import RM
 
 
 class L2Cache:
-    EOF = False
-    trace_count = 0
-
     def __init__(self, trace_file):
         """
         __init__(trace_file) - constructor
         :param trace_file: the path of the trace file to emulate
         """
+
+        # initialization
+        self.EOF = False
+        self.trace_count = 0
+
         self.trace_file = open(os.path.abspath(trace_file), 'r')
 
         if not self.trace_file:

@@ -14,7 +14,8 @@ def add_arguments(parser):
                         help='The trace file to emulate with, this argument will be ignored is --directory is added')
     parser.add_argument('-d', '--directory', metavar='dir', action='store', type=str,
                         help='Emulate all trace files in the given directory, ignore trace-file argument')
-    # TODO output
+    parser.add_argument('-o', '--output', metavar='outfile', action='store', type=str,
+                        help='The file path to write emulation information to')
     parser.add_argument('--cpu-clock', action='store', type=str, default='2GHz',
                         help='Clock for blocks running at CPU speed(default="2GHz")')
     parser.add_argument('--clock-cycle', action='store', type=int, default=1000,
@@ -43,12 +44,14 @@ def add_arguments(parser):
     parser.add_argument('--l2-miss-penalty', action='store', type=int, default=100,
                         help='The penalty (cycle) when a L2 Cache miss occurs(default=100)')
     parser.add_argument('-pm', '--port-mode', action='store', type=str, default='baseline',
-                        choices=('baseline', 'rw', 'w+r', 'rw+r'),
+                        choices=('baseline', 'rw', 'w+r', 'rw+r', 'rw+w+r'),
                         help='Determine how the r/w ports are placed on a tape')
     parser.add_argument('-ps', '--port-selection', action='store', type=str, default='dynamic',
                         choices=('dynamic"', 'static'),
                         help='Port selection policy for every r/w instr')
-    # parser.add_argument('-pp', '--port-update-policy', action='store', type=str, default='lazy')
+    parser.add_argument('-pp', '--port-update-policy', action='store', type=str, default='lazy',
+                        choices=('lazy', 'eager'),
+                        help='The tape will remain where it is or move to default place after r/w operation')
     parser.add_argument('-sp', '--set_partition', action='store', type=str, default='con',
                         choices=('con', 'way'),
                         help='Set partitioning policy, "con" for continues, use "way" to '
@@ -94,7 +97,7 @@ if __name__ == "__main__":
 
     Configs.PORT_MODE = args.port_mode
     Configs.PORT_SELECTION = args.port_selection
-    # Configs.PORT_UPDATE_POLICY = args.port_update_policy
+    Configs.PORT_UPDATE_POLICY = args.port_update_policy
     Configs.SET_PARTITION = args.set_partition
 
     if args.verbose is True:

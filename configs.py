@@ -37,7 +37,7 @@ class Configs:
 
     PORT_MODE = 'baseline'  # rw - only rw ports; rw+r - rw ports and r ports; w+r - w ports and r ports
     PORT_SELECTION = 'dynamic'   # static - move to given port; dynamic - move to nearest port
-    # PORT_UPDATE_POLICY = 'lazy'  # eager - move back to fixed position after r/w; lazy - stay where the last r/w happens
+    PORT_UPDATE_POLICY = 'lazy'  # eager - move back to fixed position after r/w; lazy - stay where the last r/w happens
     SET_PARTITION = 'con'  # con - continuous, way - separate by ways
 
     REPLACE_POLICY = 'LRU'

@@ -4,11 +4,6 @@ from configs import *
 
 
 class SRAM:
-    tags = []
-    valid = []
-    dirty = []
-    stamp = []
-
     def __init__(self, line_num):
         """
         __init__(line_num) - constructor

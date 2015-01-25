@@ -25,28 +25,25 @@ W_PORT_NUM = 0
 
 
 class RM:
-    current_trace = Trace()
-    waiting_trace = Trace()
-
-    count_down = 0
-
-    offset = Configs.GROUP_NUM * [0]
-
-    r_port = []
-    w_port = []
-    rw_port = [0, 16, 32, 48]
-
-    miss_count = 0
-    access_count = 0
-    total_cycles = 0
-    total_shifts = 0
-    total_shift_dis = 0
-
     def __init__(self, sram):
         """
         __init__(sram) - constructor
         :param sram: the SRAM that maintains tag array
         """
+
+        # initialization
+        self.offset = Configs.GROUP_NUM * [0]
+
+        self.current_trace = Trace()
+        self.waiting_trace = Trace()
+
+        self.miss_count = 0
+        self.access_count = 0
+        self.total_cycles = 0
+        self.total_shifts = 0
+        self.total_shift_dis = 0
+        self.count_down = 0
+
         self.sram = sram
 
         if Configs.PORT_MODE == 'rw':
@@ -61,6 +58,11 @@ class RM:
             self.rw_port = []
             self.w_port = [0, 32]
             self.r_port = [8, 12, 16, 20, 24, 28, 40, 44, 48, 52, 56, 60]
+        elif Configs.PORT_MODE == 'rw+w+r':
+            self.rw_port = [0, 32]
+            self.w_port = [12, 44]
+            self.r_port = [20, 24, 28, 52, 56, 60]
+
         else:  # baseline
             self.r_port = []
             self.w_port = []
@@ -110,15 +112,31 @@ class RM:
                 print('No need to shift')
             return 0
 
-        if port_type == 'r':
-            self.offset[g] = target_group_line - self.r_port[p]
-        elif port_type == 'w':
-            self.offset[g] = target_group_line - self.w_port[p]
-        elif port_type == 'rw':
-            self.offset[g] = target_group_line - self.rw_port[p]
-        else:
-            print('error: Unknown Port Type:', port_type)
-            exit()
+        if Configs.PORT_UPDATE_POLICY == 'lazy':
+            if port_type == 'r':
+                self.offset[g] = target_group_line - self.r_port[p]
+            elif port_type == 'w':
+                self.offset[g] = target_group_line - self.w_port[p]
+            elif port_type == 'rw':
+                self.offset[g] = target_group_line - self.rw_port[p]
+            else:
+                print('error: unknown port type:', port_type)
+                exit()
+        elif Configs.PORT_UPDATE_POLICY == 'eager':
+            if port_type == 'r':
+                if Configs.VERBOSE:
+                    print('Applying EAGER policy, the tape will move to default position after read complete')
+            elif port_type == 'w':
+                if Configs.VERBOSE:
+                    print('Applying EAGER policy, the tape will move to default position after write complete')
+                self.offset[g] = target_group_line - self.w_port[p]
+            elif port_type == 'rw':
+                if Configs.VERBOSE:
+                    print('Applying EAGER policy, the tape will move to default position after read/write complete')
+                self.offset[g] = target_group_line - self.rw_port[p]
+            else:
+                print('error: unknown port type:', port_type)
+                exit()
 
         self.total_shifts += 1
         self.total_shift_dis += shift_dis
