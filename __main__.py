@@ -59,6 +59,8 @@ def add_arguments(parser):
                         help='Set partitioning policy, "con" for continues, use "way" to '
                              'divide sets into different ways')
     parser.add_argument('-pre', '--preshift', action='store_true', help='Enable preshift for next i/o instr')
+    parser.add_argument('-i', '--maxinsts', action='store', default=None,
+                        help='Total number of instructions tosimulate (default: run forever)')
     parser.add_argument('-v', '--verbose', action='store_true', help='Verbose mode, show debug info')
 
 

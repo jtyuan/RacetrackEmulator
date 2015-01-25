@@ -109,6 +109,7 @@ class RM:
         elif self.current_trace.preshift_state == 'shifting':
             self.current_trace.state = 'shifting'
             self.count_down = self.current_trace.shift_count_down
+            self.total_shift_dis += self.count_down // Configs.CLOCK_CYCLE
             if Configs.VERBOSE:
                 if Configs.OUTPUT:
                     Configs.OUT_FILE.write(
@@ -123,6 +124,15 @@ class RM:
                     Configs.OUT_FILE.write(
                         '[PRESHIFT]Preshifted, ready to do I/O\n')
                 print('[PRESHIFT]Preshifted, ready to do I/O\n')
+        elif self.current_trace.preshift_state == 'miss':
+            # missed in preshift state, start memory accessing
+            self.current_trace.state = 'memory'
+            self.count_down = self.current_trace.memory_count_down
+            if Configs.VERBOSE:
+                if Configs.OUTPUT:
+                    Configs.OUT_FILE.write(
+                        '[PRESHIFT]Accessing memory for the next {0} ticks\n'.format(self.count_down))
+                print('[PRESHIFT]Accessing memory for the next {0} ticks'.format(self.count_down))
 
         self.access_count += 1
 
@@ -183,7 +193,8 @@ class RM:
             exit()
 
         self.total_shifts += 1
-        self.total_shift_dis += shift_dis
+        if Configs.PRESHIFT is False or preshift is False:
+            self.total_shift_dis += shift_dis
 
         if preshift:
             self.waiting_trace.preshift_state = 'accessing'
@@ -217,25 +228,28 @@ class RM:
 
         self.waiting_trace.target_group = target_group
 
-        if self.waiting_trace.target_group == self.current_trace.target_group:
-            # cannot preshift if in same group as current i/o trace
-            if Configs.VERBOSE:
-                if Configs.OUTPUT:
-                    Configs.OUT_FILE.write(
-                        '[PRESHIFT]Waiting i/o is in the same group as current i/o, cannot preshift\n')
-                print('[PRESHIFT]Waiting i/o is in the same group as current i/o, cannot preshift')
-            return
-
         if target_line_num >= 0:  # hit
+
+            if self.waiting_trace.target_group == self.current_trace.target_group:
+                # cannot preshift if in same group as current i/o trace
+                if Configs.VERBOSE:
+                    if Configs.OUTPUT:
+                        Configs.OUT_FILE.write(
+                            '[PRESHIFT]Waiting i/o is in the same group as current i/o, cannot preshift: {0}\n'.format(
+                                self.waiting_trace.target_group))
+                    print('[PRESHIFT]Waiting i/o is in the same group as current i/o, cannot preshift: {0}'.format(
+                        self.waiting_trace.target_group))
+                return
+
             if Configs.VERBOSE:
                 if Configs.OUTPUT:
                     Configs.OUT_FILE.write('[PRESHIFT]L2 Cache Hit\n')
                 print('[PRESHIFT]L2 Cache Hit')
-            self.current_trace.hit = True
+            self.waiting_trace.hit = True
             target_port = -1
             port_type = 'undefined'
             d = Configs.TAPE_LENGTH
-            if self.current_trace.instr == 'r':
+            if self.waiting_trace.instr == 'r':
                 # if current instr is read, to find closest read port or rw port
                 if R_PORT_NUM > 0:
                     if Configs.PORT_SELECTION == 'dynamic':
@@ -301,7 +315,7 @@ class RM:
                         print('[PRESHIFT]error: cannot find a port to write')
                         exit()
                 self.shift(port_type, target_port, target_group, target_group_line, d, preshift=True)
-            elif self.current_trace.instr == 'w':
+            elif self.waiting_trace.instr == 'w':
                 # if current instr is write, to find closest write port or rw port
                 if W_PORT_NUM > 0:
                     if Configs.PORT_SELECTION == 'dynamic':
@@ -368,8 +382,20 @@ class RM:
                         exit()
                 self.shift(port_type, target_port, target_group, target_group_line, d, preshift=True)
             else:
-                print('[PRESHIFT]error: unknown instruction type:', self.current_trace.instr)
+                print('[PRESHIFT]error: unknown instruction type:', self.waiting_trace.instr)
                 exit()
+        else:  # failed to find a matched tag in SRAM, miss
+            self.waiting_trace.hit = False
+            self.waiting_trace.preshift_state = 'miss'
+            self.waiting_trace.memory_count_down = Configs.CLOCK_CYCLE * Configs.L2_MISS_PENALTY
+            self.miss_count += 1
+            if Configs.VERBOSE:
+                if Configs.OUTPUT:
+                    Configs.OUT_FILE.write(
+                        '[PRESHIFT]L2 Cache Miss, this would take {0} ticks(on hold now)\n'.format(
+                            self.waiting_trace.memory_count_down))
+                print('[PRESHIFT]L2 Cache Miss, this would take {0} ticks(on hold now)'.format(
+                    self.waiting_trace.memory_count_down))
 
     def next_cycle(self, tick):
         """
@@ -425,12 +451,16 @@ class RM:
                         Configs.OUT_FILE.write('[PRESHIFT]Accessing L2 Cache: {0} ticks remains\n'.format(
                             self.waiting_trace.access_count_down))
                     print('[PRESHIFT]Accessing L2 Cache: {0} ticks remains'.format(
-                            self.waiting_trace.access_count_down))
+                        self.waiting_trace.access_count_down))
 
         if self.waiting_trace.instr != 'EOF' and tick > self.waiting_trace.start_tick \
                 and self.waiting_trace.state != 'ready':
             self.waiting_trace.state = 'ready'
             if Configs.PRESHIFT:  # preshift logic
+                if Configs.VERBOSE:
+                    if Configs.OUTPUT:
+                        Configs.OUT_FILE.write('[PRESHIFT]Starting up preshift logic\n')
+                    print('[PRESHIFT]Starting up preshift logic')
                 self.preshift(tick)
 
         if self.count_down == 0:

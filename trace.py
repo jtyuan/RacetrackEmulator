@@ -30,3 +30,4 @@ class Trace:
         self.preshift_state = 'idle'
         self.access_count_down = 0  # for preshift
         self.shift_count_down = 0   # for preshift
+        self.memory_count_down = 0  # for preshift
