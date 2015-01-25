@@ -89,6 +89,8 @@ class RM:
         self.count_down = Configs.CLOCK_CYCLE * Configs.L2_ACCESS_LATENCY
 
         if Configs.VERBOSE:
+            if Configs.OUTPUT:
+                Configs.OUT_FILE.write('Start accessing L2 Cache for the next {0} ticks\n'.format(self.count_down))
             print('Start accessing L2 Cache for the next {0} ticks'.format(self.count_down))
 
         self.waiting_trace.state = 'waiting'
@@ -112,6 +114,8 @@ class RM:
 
         if shift_dis == 0:
             if Configs.VERBOSE:
+                if Configs.OUTPUT:
+                    Configs.OUT_FILE.write('No need to shift\n')
                 print('No need to shift')
             return 0
 
@@ -128,13 +132,19 @@ class RM:
         elif Configs.PORT_UPDATE_POLICY == 'eager':
             if port_type == 'r':
                 if Configs.VERBOSE:
-                    print('Applying EAGER policy, the tape will move to default position after read complete')
+                    if Configs.OUTPUT:
+                        Configs.OUT_FILE.write('Tape start restoring default position after reading\n')
+                    print('Tape start restoring default position after reading')
             elif port_type == 'w':
                 if Configs.VERBOSE:
-                    print('Applying EAGER policy, the tape will move to default position after write complete')
+                    if Configs.OUTPUT:
+                        Configs.OUT_FILE.write('Tape start restoring default position after writing\n')
+                    print('Tape start restoring default position after reading')
             elif port_type == 'rw':
                 if Configs.VERBOSE:
-                    print('Applying EAGER policy, the tape will move to default position after read/write complete')
+                    if Configs.OUTPUT:
+                        Configs.OUT_FILE.write('Tape start restoring default position after reading\n')
+                    print('Tape start restoring default position after reading')
             else:
                 print('error: unknown port type:', port_type)
                 exit()
@@ -149,6 +159,8 @@ class RM:
         self.count_down = shift_dis * Configs.L2_SHIFT_LATENCY * Configs.CLOCK_CYCLE
 
         if Configs.VERBOSE:
+            if Configs.OUTPUT:
+                Configs.OUT_FILE.write('Start shifting on Group{0} for the next {1} ticks\n'.format(g, self.count_down))
             print('Start shifting on Group{0} for the next {1} ticks'.format(g, self.count_down))
 
         return shift_dis
@@ -162,10 +174,17 @@ class RM:
         self.count_down -= Configs.CLOCK_CYCLE
 
         if Configs.VERBOSE:
+            if Configs.OUTPUT:
+                Configs.OUT_FILE.write(
+                    'Trace state: current({0}) next({1})\n'.format(self.current_trace.state, self.waiting_trace.state))
             print('Trace state: current({0}) next({1})'.format(self.current_trace.state, self.waiting_trace.state))
             if self.count_down >= 0:
+                if Configs.OUTPUT:
+                    Configs.OUT_FILE.write('Count down: {0}\n'.format(self.count_down))
                 print('Count down:', self.count_down)
             else:
+                if Configs.OUTPUT:
+                    Configs.OUT_FILE.write('Waiting for next instr\n')
                 print('Waiting for next instr')
 
         if self.waiting_trace.instr != 'EOF' and tick > self.waiting_trace.start_tick:
@@ -174,6 +193,8 @@ class RM:
         if self.count_down == 0:
             if self.current_trace.state == 'accessing':
                 if Configs.VERBOSE:
+                    if Configs.OUTPUT:
+                        Configs.OUT_FILE.write('L2 Cache accessed\n')
                     print('L2 Cache accessed')
 
                 self.current_trace.target_line_num = self.sram.compare_tag(self.current_trace.tag,
@@ -184,6 +205,8 @@ class RM:
 
                 if target_line_num >= 0:  # hit
                     if Configs.VERBOSE:
+                        if Configs.OUTPUT:
+                            Configs.OUT_FILE.write('L2 Cache Hit\n')
                         print('L2 Cache Hit')
                     self.current_trace.hit = True
                     target_port = -1
@@ -229,19 +252,31 @@ class RM:
                             else:
                                 print('error: undefined port selection policy')
                                 exit()
-                        if Configs.PORT_MODE == 'w+r' and Configs.PORT_SELECTION == 'static' \
-                                and port_type == 'undefined':
+                        if Configs.PORT_SELECTION == 'static' and port_type == 'undefined':
                             # haven't found a port in corresponding area
-                            # only when use 'w+r' port mode can this situation occur
-                            if target_line_num < Configs.TAPE_DOMAIN // 2 and R_PORT_NUM > 0:
-                                # target is in the 1st half of the group
-                                d = abs(self.r_port[0] + self.offset[target_group] - target_group_line)
-                                target_port = 0
-                                port_type = 'r'
+                            if R_PORT_NUM > 0:
+                                if target_line_num < Configs.TAPE_DOMAIN // 2:
+                                    # target is in the 1st half of the group
+                                    d = abs(self.r_port[0] + self.offset[target_group] - target_group_line)
+                                    target_port = 0
+                                    port_type = 'r'
+                                else:
+                                    target_port = int((R_PORT_NUM + 0.5) // 2)
+                                    d = abs(self.r_port[target_port] + self.offset[target_group] - target_group_line)
+                                    port_type = 'r'
+                            elif RW_PORT_NUM > 0:
+                                if target_line_num < Configs.TAPE_DOMAIN // 2:
+                                    # target is in the 1st half of the group
+                                    d = abs(self.rw_port[0] + self.offset[target_group] - target_group_line)
+                                    target_port = 0
+                                    port_type = 'rw'
+                                else:
+                                    target_port = int((RW_PORT_NUM + 0.5) // 2)
+                                    d = abs(self.rw_port[target_port] + self.offset[target_group] - target_group_line)
+                                    port_type = 'rw'
                             else:
-                                target_port = int((R_PORT_NUM + 0.5) // 2)
-                                d = abs(self.r_port[target_port] + self.offset[target_group] - target_group_line)
-                                port_type = 'r'
+                                print('error: cannot find a port to write')
+                                exit()
                         self.shift(port_type, target_port, target_group, target_group_line, d)
                     elif self.current_trace.instr == 'w':
                         # if current instr is write, to find closest write port or rw port
@@ -283,8 +318,7 @@ class RM:
                             else:
                                 print('error: undefined port selection policy')
                                 exit()
-                        if Configs.PORT_MODE != 'rw' and Configs.PORT_SELECTION == 'static' \
-                                and port_type == 'undefined':
+                        if Configs.PORT_SELECTION == 'static' and port_type == 'undefined':
                             # haven't found a port in corresponding area
                             if W_PORT_NUM > 0:
                                 if target_line_num < Configs.TAPE_DOMAIN // 2:
@@ -306,7 +340,9 @@ class RM:
                                     target_port = int((RW_PORT_NUM + 0.5) // 2)
                                     d = abs(self.rw_port[target_port] + self.offset[target_group] - target_group_line)
                                     port_type = 'rw'
-
+                            else:
+                                print('error: cannot find a port to write')
+                                exit()
                         self.shift(port_type, target_port, target_group, target_group_line, d)
                     else:
                         print('error: Unknown Instruction type:', self.current_trace.instr)
@@ -315,13 +351,22 @@ class RM:
                         if self.current_trace.instr == 'r':
                             self.current_trace.state = 'reading'
                             self.count_down = Configs.CLOCK_CYCLE * Configs.L2_R_LATENCY
+
                             if Configs.VERBOSE:
+                                if Configs.OUTPUT:
+                                    Configs.OUT_FILE.write(
+                                        'Current trace start reading from L2, it would take {0} ticks\n'.format(
+                                            self.count_down))
                                 print('Current trace start reading from L2, it would take {0} ticks'.format(
                                     self.count_down))
                         elif self.current_trace.instr == 'w':
                             self.current_trace.state = 'writing'
                             self.count_down = Configs.CLOCK_CYCLE * Configs.L2_W_LATENCY
                             if Configs.VERBOSE:
+                                if Configs.OUTPUT:
+                                    Configs.OUT_FILE.write(
+                                        'Current trace start writing in L2, it would take {0} ticks\n'.format(
+                                            self.count_down))
                                 print('Current trace start writing in L2, it would take {0} ticks'.format(
                                     self.count_down))
                         else:
@@ -334,27 +379,41 @@ class RM:
                     self.count_down = Configs.CLOCK_CYCLE * Configs.L2_MISS_PENALTY
                     self.miss_count += 1
                     if Configs.VERBOSE:
+                        if Configs.OUTPUT:
+                            Configs.OUT_FILE.write('L2 Cache Miss, this would take {0} ticks\n'.format(self.count_down))
                         print('L2 Cache Miss, this would take {0} ticks'.format(self.count_down))
             # end of if state == 'accessing'
             elif self.current_trace.state == 'shifting':
                 # after shifting, start reading/writing
                 if Configs.VERBOSE:
+                    if Configs.OUTPUT:
+                        Configs.OUT_FILE.write('Shift complete\n')
                     print('Shift complete')
                 if self.current_trace.instr == 'r':
                     self.current_trace.state = 'reading'
                     self.count_down = Configs.CLOCK_CYCLE * Configs.L2_R_LATENCY
                     if Configs.VERBOSE:
+                        if Configs.OUTPUT:
+                            Configs.OUT_FILE.write(
+                                'Current trace start reading from L2, it would take {0} ticks\n'.format(
+                                    self.count_down))
                         print('Current trace start reading from L2, it would take {0} ticks'.format(self.count_down))
                 elif self.current_trace.instr == 'w':
                     self.current_trace.state = 'writing'
                     self.count_down = Configs.CLOCK_CYCLE * Configs.L2_W_LATENCY
                     if Configs.VERBOSE:
+                        if Configs.OUTPUT:
+                            Configs.OUT_FILE.write(
+                                'Current trace start writing in L2, it would take {0} ticks\n'.format(self.count_down))
                         print('Current trace start writing in L2, it would take {0} ticks'.format(self.count_down))
                 else:
                     print('error: Unknown Instruction type:', self.current_trace.instr)
                     exit()
             elif self.current_trace.state == 'reading':
                 if Configs.VERBOSE:
+                    if Configs.OUTPUT:
+                        Configs.OUT_FILE.write('L2 reading complete\n')
+                        Configs.OUT_FILE.write('Current trace finished\n\n')
                     print('L2 reading complete')
                 self.sram.read(self.current_trace.target_line_num, tick)
                 self.current_trace.state = 'finished'
@@ -362,6 +421,9 @@ class RM:
                     print('Current trace finished\n')
             elif self.current_trace.state == 'writing':
                 if Configs.VERBOSE:
+                    if Configs.OUTPUT:
+                        Configs.OUT_FILE.write('L2 writing complete\n')
+                        Configs.OUT_FILE.write('Current trace finished\n\n')
                     print('L2 writing complete')
                 self.sram.write(self.current_trace.target_line_num, tick)
                 self.current_trace.state = 'finished'
@@ -369,6 +431,9 @@ class RM:
                     print('Current trace finished\n')
             elif self.current_trace.state == 'memory':
                 if Configs.VERBOSE:
+                    if Configs.OUTPUT:
+                        Configs.OUT_FILE.write('Main memory access complete\n')
+                        Configs.OUT_FILE.write('Current trace finished\n\n')
                     print('Main memory access complete')
                 self.sram.update(self.current_trace.tag, self.current_trace.index, tick)
                 # for t, k in zip(self.sram.tags, range(len(self.sram.tags))):

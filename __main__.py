@@ -13,9 +13,11 @@ def add_arguments(parser):
     parser.add_argument('-t', '--tracefile', action='store', type=str,
                         help='The trace file to emulate with, this argument will be ignored is --directory is added')
     parser.add_argument('-d', '--directory', metavar='dir', action='store', type=str,
-                        help='Emulate all trace files in the given directory, ignore trace-file argument')
+                        help='Emulate all trace files in the given directory, enable \
+                        this will ignore trace-file argument')
     parser.add_argument('-o', '--output', metavar='outfile', action='store', type=str,
-                        help='The file path to write emulation information to')
+                        help="The file path to write emulation information to. \
+                        Add -v to save the whole emulation detail.")
     parser.add_argument('--cpu-clock', action='store', type=str, default='2GHz',
                         help='Clock for blocks running at CPU speed(default="2GHz")')
     parser.add_argument('--clock-cycle', action='store', type=int, default=1000,
@@ -95,6 +97,8 @@ if __name__ == "__main__":
     Configs.L2_SHIFT_LATENCY = args.l2_shift_latency
     Configs.L2_MISS_PENALTY = args.l2_miss_penalty
 
+    Configs.reload_attr()
+
     Configs.PORT_MODE = args.port_mode
     Configs.PORT_SELECTION = args.port_selection
     Configs.PORT_UPDATE_POLICY = args.port_update_policy
@@ -102,7 +106,7 @@ if __name__ == "__main__":
 
     if args.output:
         Configs.OUTPUT = True
-        Configs.OUT_FILE = open(os.path.abspath(args.output))
+        Configs.OUT_FILE = open(os.path.abspath(args.output), 'w')
 
     if args.verbose is True:
         Configs.VERBOSE = True
@@ -111,6 +115,8 @@ if __name__ == "__main__":
         if not args.tracefile:
             print('error: the following arguments are required: trace-file')
         else:
+            if Configs.OUTPUT:
+                Configs.OUT_FILE.write('Trace file: {0}\n'.format(args.tracefile))
             print('Trace file:', args.tracefile)
             l2cache = L2Cache(args.tracefile)
             while True:
@@ -118,11 +124,14 @@ if __name__ == "__main__":
                     break
     else:
         Configs.TRACE_DIR = args.directory
+        if Configs.OUTPUT:
+            Configs.OUT_FILE.write('Trace dir: {0}\n'.format(Configs.TRACE_DIR))
         print('Trace dir:', Configs.TRACE_DIR)
         for trace in os.listdir(Configs.TRACE_DIR):
             if trace[-6:] == '.trace':
+                if Configs.OUTPUT:
+                    Configs.OUT_FILE.write('Trace File: {0}\n'.format(trace))
                 print('Trace File:', trace)
-                print(os.path.join(Configs.TRACE_DIR, trace))
                 l2cache = L2Cache(os.path.join(Configs.TRACE_DIR, trace))
                 while True:
                     if not l2cache.next_cycle():

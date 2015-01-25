@@ -39,7 +39,7 @@ class SRAM:
         line = self.update_line_number(index)
         if Configs.VERBOSE:
             if Configs.OUTPUT:
-                Configs.OUT_FILE.write('SRAM updating with tag:{0} on line {1}'.format(tag, line))
+                Configs.OUT_FILE.write('SRAM updating with tag:{0} on line {1}\n'.format(tag, line))
             print('SRAM updating with tag:{0} on line {1}'.format(tag, line))
         if line < 0 or line >= self.line_num:
             return False
@@ -49,7 +49,7 @@ class SRAM:
         self.dirty[line] = False
         if Configs.VERBOSE:
             if Configs.OUTPUT:
-                Configs.OUT_FILE.write('SRAM tag array updated')
+                Configs.OUT_FILE.write('SRAM tag array updated\n')
             print('SRAM tag array updated')
         return True
 
@@ -79,11 +79,11 @@ class SRAM:
             # a replacement occurred
             if Configs.VERBOSE:
                 if Configs.OUTPUT:
-                    Configs.OUT_FILE.write('Line {0} in L2 Cache is replaced'.format(best))
+                    Configs.OUT_FILE.write('Line {0} in L2 Cache is replaced\n'.format(best))
                 print('Line {0} in L2 Cache is replaced'.format(best))
                 if self.dirty[best] is True:
                     if Configs.OUTPUT:
-                        Configs.OUT_FILE.write('This block is dirty, write back to next memory level')
+                        Configs.OUT_FILE.write('This block is dirty, write back to next memory level\n')
                     print('This block is dirty, write back to next memory level')
 
         return best
@@ -95,6 +95,8 @@ class SRAM:
         :param tick: the time when write happens
         """
         if Configs.VERBOSE:
+            if Configs.OUTPUT:
+                Configs.OUT_FILE.write('Write on line {0} in L2 Cache, marked as dirty\n'.format(target_line_num))
             print('Write on line {0} in L2 Cache, marked as dirty'.format(target_line_num))
         self.dirty[target_line_num] = True
         self.stamp[target_line_num] = tick

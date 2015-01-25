@@ -49,6 +49,20 @@ class Configs:
     VERBOSE = False
 
     @staticmethod
+    def reload_attr():
+        Configs.GROUP_NUM = Configs.L2_SIZE // (Configs.GROUP_TAPE * Configs.TAPE_DOMAIN)  # # of groups
+        Configs.LINE_NUM = Configs.GROUP_NUM * Configs.TAPE_DOMAIN  # # of lines
+        Configs.SET_LINE_NUM = Configs.L2_ASSOC  # # of lines in one set
+        Configs.SET_NUM = Configs.LINE_NUM // Configs.SET_LINE_NUM  # # of sets
+
+        Configs.BLOCK_SIZE = Configs.GROUP_TAPE  # size (in bit) of a block
+
+        Configs.OFFSET_BITS = int(math.log2(Configs.BLOCK_SIZE // Configs.BYTE_SIZE))  # # of bits that byte offset takes in an address
+        Configs.SET_BITS = int(math.log2(Configs.SET_NUM))  # # of bits that set index takes in an address
+        Configs.TAG_BITS = int(math.log2(Configs.ADDRESS_BITS) - Configs.SET_BITS - Configs.OFFSET_BITS)  # # of bits that tag takes in an address
+
+
+    @staticmethod
     def print_info():
         print('-----------------------------\n  Emulation System Summary:')
         cpu_clock = '2GHz'
@@ -79,4 +93,20 @@ class Configs:
         print('  Replace Policy:', Configs.REPLACE_POLICY)
         print('  Verbose mode:', Configs.VERBOSE)
         print('-----------------------------\n')
+        
+        if Configs.OUTPUT:
+            Configs.OUT_FILE.write('-----------------------------\n  Emulation System Summary:\n')
+            Configs.OUT_FILE.write('  L2 Size: {0}\n'.format(l2_size))
+            Configs.OUT_FILE.write('  L2 Associativity: {0}\n'.format(Configs.L2_ASSOC))
+            Configs.OUT_FILE.write('  L2 Read/Write Latency: {0}/{1}\n'.format(Configs.L2_R_LATENCY, Configs.L2_W_LATENCY))
+            Configs.OUT_FILE.write('  L2 Access Latency: {0}\n'.format(Configs.L2_ACCESS_LATENCY))
+            Configs.OUT_FILE.write('  L2 Shift Latency: {0}\n'.format(Configs.L2_SHIFT_LATENCY))
+            Configs.OUT_FILE.write('  L2 Miss Penalty: {0}\n'.format(Configs.L2_MISS_PENALTY))
+            Configs.OUT_FILE.write('  Port Placement Mode: {0}\n'.format(Configs.PORT_MODE))
+            Configs.OUT_FILE.write('  Port Selection: {0}\n'.format(Configs.PORT_SELECTION))
+            Configs.OUT_FILE.write('  Set Partition: {0}\n'.format(Configs.SET_PARTITION))
+            Configs.OUT_FILE.write('  Replace Policy: {0}\n'.format(Configs.REPLACE_POLICY))
+            Configs.OUT_FILE.write('  Verbose mode: {0}\n'.format(Configs.VERBOSE))
+            Configs.OUT_FILE.write('-----------------------------\n')
+            
 

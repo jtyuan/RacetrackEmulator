@@ -32,13 +32,20 @@ class L2Cache:
 
         Configs.print_info()
 
+        if Configs.OUTPUT:
+            Configs.OUT_FILE.write('**Emulation Start**\n');
         print('**Emulation Start**')
         if Configs.VERBOSE:
+            if Configs.OUTPUT:
+                Configs.OUT_FILE.write('\nCurrent tick: 0\n')
+                Configs.OUT_FILE.write('Trace state: current(unfetched) next(unfetched)\n\n')
             print('\nCurrent tick: 0')
             print('Trace state: current(unfetched) next(unfetched)\n')
 
         self.current_trace = Trace()
         if Configs.VERBOSE:
+            if Configs.OUTPUT:
+                Configs.OUT_FILE.write('Fetching the first trace\n')
             print('Fetching the first trace')
         self.waiting_trace = parse(self.trace_file.readline())
         self.next_trace()  # get 1st trace
@@ -54,6 +61,9 @@ class L2Cache:
 
         self.trace_count += 1
         if Configs.VERBOSE:
+            if Configs.OUTPUT:
+                Configs.OUT_FILE.write('Start process waiting trace\n')
+                Configs.OUT_FILE.write('Executing the {0}th trace\n'.format(self.trace_count))
             print('Start process waiting trace')
             print('Executing the {0}th trace'.format(self.trace_count))
 
@@ -70,6 +80,8 @@ class L2Cache:
             self.waiting_trace = Trace(instr='EOF')
         else:
             if Configs.VERBOSE:
+                if Configs.OUTPUT:
+                    Configs.OUT_FILE.write('Pre-fetching next trace\n')
                 print('Pre-fetching next trace')
             self.waiting_trace = parse(next_line)
         self.rm.next_trace(self.current_trace, self.waiting_trace)
@@ -82,11 +94,22 @@ class L2Cache:
         self.current_tick += Configs.CLOCK_CYCLE
 
         if Configs.VERBOSE:
+            if Configs.OUTPUT:
+                Configs.OUT_FILE.write('\nCurrent tick: {0}\n'.format(self.current_tick))
             print('\nCurrent tick:', self.current_tick)
 
         self.rm.next_cycle(self.current_tick)
 
         if self.current_trace.state == 'finished' and self.EOF:
+            if Configs.OUTPUT:
+                Configs.OUT_FILE.write('\n**Emulation Complete**\n')
+                Configs.OUT_FILE.write('secs emulated: {0}\n'.format(self.current_tick / Configs.CPU_CLOCK))
+                Configs.OUT_FILE.write('total cycles: {0}\n'.format(self.current_tick // Configs.CLOCK_CYCLE))
+                Configs.OUT_FILE.write('total shifts: {0}\n'.format(self.rm.total_shifts))
+                Configs.OUT_FILE.write('total shift overhead: {0}\n'.format(self.rm.total_shift_dis))
+                Configs.OUT_FILE.write('total access: {0}\n'.format(self.rm.access_count))
+                Configs.OUT_FILE.write('total misses: {0}\n'.format(self.rm.miss_count))
+                Configs.OUT_FILE.write('**********************\n')
             print('\n**Emulation Complete**')
             print('secs emulated:', self.current_tick / Configs.CPU_CLOCK)
             print('total cycles:', self.current_tick // Configs.CLOCK_CYCLE)
@@ -98,9 +121,6 @@ class L2Cache:
             return False
 
         if self.current_trace.state == 'finished' and self.waiting_trace.state == 'ready':
-            # for t, k in zip(self.sram.tags, range(len(self.sram.tags))):
-            # if t is not None:
-            #         print(t, k)
             self.next_trace()
 
         if self.waiting_trace.state != 'ready':
