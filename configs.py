@@ -43,6 +43,8 @@ class Configs:
     REPLACE_POLICY = 'LRU'
 
     TRACE_DIR = 'trace'
+    OUTPUT = False
+    OUT_FILE = ''
 
     VERBOSE = False
 

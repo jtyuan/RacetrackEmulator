@@ -38,6 +38,8 @@ class SRAM:
         """
         line = self.update_line_number(index)
         if Configs.VERBOSE:
+            if Configs.OUTPUT:
+                Configs.OUT_FILE.write('SRAM updating with tag:{0} on line {1}'.format(tag, line))
             print('SRAM updating with tag:{0} on line {1}'.format(tag, line))
         if line < 0 or line >= self.line_num:
             return False
@@ -46,6 +48,8 @@ class SRAM:
         self.stamp[line] = tick
         self.dirty[line] = False
         if Configs.VERBOSE:
+            if Configs.OUTPUT:
+                Configs.OUT_FILE.write('SRAM tag array updated')
             print('SRAM tag array updated')
         return True
 
@@ -74,8 +78,12 @@ class SRAM:
         if self.valid[best] is True:
             # a replacement occurred
             if Configs.VERBOSE:
+                if Configs.OUTPUT:
+                    Configs.OUT_FILE.write('Line {0} in L2 Cache is replaced'.format(best))
                 print('Line {0} in L2 Cache is replaced'.format(best))
                 if self.dirty[best] is True:
+                    if Configs.OUTPUT:
+                        Configs.OUT_FILE.write('This block is dirty, write back to next memory level')
                     print('This block is dirty, write back to next memory level')
 
         return best

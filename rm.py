@@ -132,14 +132,15 @@ class RM:
             elif port_type == 'w':
                 if Configs.VERBOSE:
                     print('Applying EAGER policy, the tape will move to default position after write complete')
-                self.offset[g] = target_group_line - self.w_port[p]
             elif port_type == 'rw':
                 if Configs.VERBOSE:
                     print('Applying EAGER policy, the tape will move to default position after read/write complete')
-                self.offset[g] = target_group_line - self.rw_port[p]
             else:
                 print('error: unknown port type:', port_type)
                 exit()
+        else:
+            print('error: unimpelmented port update policy')
+            exit()
 
         self.total_shifts += 1
         self.total_shift_dis += shift_dis

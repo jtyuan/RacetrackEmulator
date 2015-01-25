@@ -47,7 +47,7 @@ def add_arguments(parser):
                         choices=('baseline', 'rw', 'w+r', 'rw+r', 'rw+w+r', 'w+r+r'),
                         help='Determine how the r/w ports are placed on a tape')
     parser.add_argument('-ps', '--port-selection', action='store', type=str, default='dynamic',
-                        choices=('dynamic"', 'static'),
+                        choices=('dynamic', 'static'),
                         help='Port selection policy for every r/w instr')
     parser.add_argument('-pp', '--port-update-policy', action='store', type=str, default='lazy',
                         choices=('lazy', 'eager'),
@@ -99,6 +99,10 @@ if __name__ == "__main__":
     Configs.PORT_SELECTION = args.port_selection
     Configs.PORT_UPDATE_POLICY = args.port_update_policy
     Configs.SET_PARTITION = args.set_partition
+
+    if args.output:
+        Configs.OUTPUT = True
+        Configs.OUT_FILE = open(os.path.abspath(args.output))
 
     if args.verbose is True:
         Configs.VERBOSE = True
