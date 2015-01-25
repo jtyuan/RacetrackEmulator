@@ -9,10 +9,27 @@ Some thoughts:
     when SRAM hits, the latency would only be DWM accessing time, SRAM is not in the critical path
 
     when miss:
-        update/replace
+        update/replace -- shift is not in the critical path, no shift overheads
     when hit:
         read(update timestamp in SRAM)
         write(update timestamp in SRAM, set dirty bit) -- write back
+
+    Preshift:
+        happens when next trace is ready, and it'll use a different tape group from the last trace
+        preshift must first access L2 (6 cycles by default), and then query SRAM to see if it is in the L2 Cache
+
+        when miss:
+            set its state to miss, and wait for its turn to access next level memory
+        when hit:
+            preshift until shift is done or its turn comes
+
+        when interrupted:
+            during accessing:
+                continue accessing
+            during shifting:
+                continue shifting
+            after shifted:
+                wait for its turn to read/write
 '''
 
 RW_PORT_SIZE = 12  # the size of a W/R port
