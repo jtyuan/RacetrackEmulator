@@ -33,6 +33,6 @@ def __addr_parse(addr):
     if Configs.VERBOSE:
         if Configs.OUTPUT:
             Configs.OUT_FILE.write(
-                'Instr tag: {0} index {1} offset{2}\n'.format(bin(tag)[2:], bin(index)[2:], bin(byte_offset)[2:]))
+                'Instr tag: {0} index: {1} offset: {2}\n'.format(bin(tag)[2:], bin(index)[2:], bin(byte_offset)[2:]))
         print('Instr tag:', bin(tag)[2:], 'index:', bin(index)[2:], 'offset:', bin(byte_offset)[2:])
     return tag, index, byte_offset

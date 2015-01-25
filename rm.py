@@ -87,18 +87,17 @@ class RM:
         self.waiting_trace = waiting_trace
 
         if Configs.PRESHIFT is False or self.current_trace.preshift_state == 'idle':
-            # the current_trace now was not preshifted before
+            # the current_trace now was not preshifted
             self.current_trace.state = 'accessing'
             self.count_down = Configs.CLOCK_CYCLE * Configs.L2_ACCESS_LATENCY
-
             if Configs.VERBOSE:
                 if Configs.OUTPUT:
                     Configs.OUT_FILE.write('Start accessing L2 Cache for the next {0} ticks\n'.format(self.count_down))
                 print('Start accessing L2 Cache for the next {0} ticks'.format(self.count_down))
-
             self.waiting_trace.state = 'waiting'
         # else the current_trace now was preshifted
         elif self.current_trace.preshift_state == 'accessing':
+            # the trace is still in accessing state, continue accessing
             self.current_trace.state = 'accessing'
             self.count_down = self.current_trace.access_count_down
             if Configs.VERBOSE:
@@ -107,9 +106,13 @@ class RM:
                         '[PRESHIFT]Continue accessing L2 Cache for the next {0} ticks\n'.format(self.count_down))
                 print('[PRESHIFT]Continue accessing L2 Cache for the next {0} ticks'.format(self.count_down))
         elif self.current_trace.preshift_state == 'shifting':
+            # the trace is in the middle of shifting when it comes to its turn, continue shifting
             self.current_trace.state = 'shifting'
             self.count_down = self.current_trace.shift_count_down
+
+            # shifts from now on are in the critical path
             self.total_shift_dis += self.count_down // Configs.CLOCK_CYCLE
+
             if Configs.VERBOSE:
                 if Configs.OUTPUT:
                     Configs.OUT_FILE.write(
@@ -125,9 +128,10 @@ class RM:
                         '[PRESHIFT]Preshifted, ready to do I/O\n')
                 print('[PRESHIFT]Preshifted, ready to do I/O\n')
         elif self.current_trace.preshift_state == 'miss':
-            # missed in preshift state, start memory accessing
+            # finished accessing, missed in preshift state, start memory accessing
             self.current_trace.state = 'memory'
             self.count_down = self.current_trace.memory_count_down
+            self.miss_count += 1
             if Configs.VERBOSE:
                 if Configs.OUTPUT:
                     Configs.OUT_FILE.write(
@@ -189,11 +193,11 @@ class RM:
                 print('error: unknown port type:', port_type)
                 exit()
         else:
-            print('error: unimpelmented port update policy')
+            print('error: unimplemented port update policy')
             exit()
 
         self.total_shifts += 1
-        if Configs.PRESHIFT is False or preshift is False:
+        if preshift is False:
             self.total_shift_dis += shift_dis
 
         if preshift:
@@ -203,10 +207,10 @@ class RM:
             if Configs.VERBOSE:
                 if Configs.OUTPUT:
                     Configs.OUT_FILE.write(
-                        '[PRESHIFT]Start preshifting on Group{0} for the next {1} ticks\n'.format(g,
-                                                                                                  self.waiting_trace.shift_count_down))
-                print('[PRESHIFT]Start preshifting on Group{0} for the next {1} ticks'.format(g,
-                                                                                              self.waiting_trace.shift_count_down))
+                        '[PRESHIFT]Start accessing L2 Cache for '
+                        'the next {0} ticks\n'.format(self.waiting_trace.access_count_down))
+                print('[PRESHIFT]Start accessing L2 Cache for '
+                      'the next {0} ticks'.format(self.waiting_trace.access_count_down))
         else:
             self.current_trace.state = 'shifting'
             self.count_down = shift_dis * Configs.L2_SHIFT_LATENCY * Configs.CLOCK_CYCLE
@@ -231,13 +235,14 @@ class RM:
         if target_line_num >= 0:  # hit
 
             if self.waiting_trace.target_group == self.current_trace.target_group:
+                    # and self.current_trace.state == 'shifting':
                 # cannot preshift if in same group as current i/o trace
                 if Configs.VERBOSE:
                     if Configs.OUTPUT:
                         Configs.OUT_FILE.write(
-                            '[PRESHIFT]Waiting i/o is in the same group as current i/o, cannot preshift: {0}\n'.format(
+                            '[PRESHIFT]Current i/o is using corresponding tapes, cannot preshift: {0}\n'.format(
                                 self.waiting_trace.target_group))
-                    print('[PRESHIFT]Waiting i/o is in the same group as current i/o, cannot preshift: {0}'.format(
+                    print('[PRESHIFT]Current i/o is using corresponding tapes, cannot preshift: {0}'.format(
                         self.waiting_trace.target_group))
                 return
 
@@ -386,16 +391,17 @@ class RM:
                 exit()
         else:  # failed to find a matched tag in SRAM, miss
             self.waiting_trace.hit = False
-            self.waiting_trace.preshift_state = 'miss'
+            self.waiting_trace.preshift_state = 'accessing'
+            self.waiting_trace.access_count_down = Configs.CLOCK_CYCLE * Configs.L2_ACCESS_LATENCY
             self.waiting_trace.memory_count_down = Configs.CLOCK_CYCLE * Configs.L2_MISS_PENALTY
-            self.miss_count += 1
+            # self.miss_count += 1  - this count will be added when waiting_trace's turn comes
             if Configs.VERBOSE:
                 if Configs.OUTPUT:
                     Configs.OUT_FILE.write(
-                        '[PRESHIFT]L2 Cache Miss, this would take {0} ticks(on hold now)\n'.format(
-                            self.waiting_trace.memory_count_down))
-                print('[PRESHIFT]L2 Cache Miss, this would take {0} ticks(on hold now)'.format(
-                    self.waiting_trace.memory_count_down))
+                        '[PRESHIFT]Start accessing L2 Cache Miss, for the next {0} ticks\n'.format(
+                            self.waiting_trace.access_count_down))
+                print('[PRESHIFT]Start accessing L2 Cache Miss, for the next {0} ticks'.format(
+                    self.waiting_trace.access_count_down))
 
     def next_cycle(self, tick):
         """
@@ -408,10 +414,22 @@ class RM:
         if Configs.PRESHIFT:
             if self.waiting_trace.preshift_state == 'accessing':
                 # Before preshifting, must first access L2 Cache for 6(default) cycles
+                if Configs.VERBOSE:
+                    if Configs.OUTPUT:
+                        Configs.OUT_FILE.write('[PRESHIFT]L2 Cache accessed\n')
+                    print('[PRESHIFT]L2 Cache accessed')
                 self.waiting_trace.access_count_down -= Configs.CLOCK_CYCLE
                 if self.waiting_trace.access_count_down == 0:
-                    # start preshifting after L2 Cache access
-                    self.waiting_trace.preshift_state = 'shifting'
+                    if self.waiting_trace.shift_count_down > 0:
+                        # start preshifting after L2 Cache access
+                        self.waiting_trace.preshift_state = 'shifting'
+                    elif self.waiting_trace.memory_count_down > 0:
+                        # waiting trace missed
+                        self.waiting_trace.preshift_state = 'miss'
+                        if Configs.VERBOSE:
+                            if Configs.OUTPUT:
+                                Configs.OUT_FILE.write('[PRESHIFT]L2 Cache Miss, on hold now\n')
+                            print('[PRESHIFT]L2 Cache Miss, on hold now')
             elif self.waiting_trace.preshift_state == 'shifting':
                 # Preshifting
                 self.waiting_trace.shift_count_down -= Configs.CLOCK_CYCLE

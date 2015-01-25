@@ -41,6 +41,8 @@ class Configs:
     SET_PARTITION = 'con'  # con - continuous, way - separate by ways
     PRESHIFT = False
 
+    MAX_INSTR = -1
+
     REPLACE_POLICY = 'LRU'
 
     TRACE_DIR = 'trace'

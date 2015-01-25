@@ -74,7 +74,7 @@ class L2Cache:
 
         next_line = self.trace_file.readline()
 
-        if not next_line:
+        if 0 < Configs.MAX_INSTR <= self.trace_count or not next_line:
             self.EOF = True
             print('No more traces left')
             self.waiting_trace = Trace(instr='EOF')
@@ -86,6 +86,7 @@ class L2Cache:
             self.waiting_trace = parse(next_line)
         self.rm.next_trace(self.current_trace, self.waiting_trace)
 
+    @property
     def next_cycle(self):
         """
         next_cycle() - move the clock to next cycle, do what ever should be done in this cycle
@@ -106,7 +107,8 @@ class L2Cache:
                 Configs.OUT_FILE.write('secs emulated: {0}\n'.format(self.current_tick / Configs.CPU_CLOCK))
                 Configs.OUT_FILE.write('total cycles: {0}\n'.format(self.current_tick // Configs.CLOCK_CYCLE))
                 Configs.OUT_FILE.write('total shifts: {0}\n'.format(self.rm.total_shifts))
-                Configs.OUT_FILE.write('total shift overhead: {0}\n'.format(self.rm.total_shift_dis))
+                Configs.OUT_FILE.write(
+                    'total shift overhead: {0}\n'.format(self.rm.total_shift_dis * Configs.L2_SHIFT_LATENCY))
                 Configs.OUT_FILE.write('total access: {0}\n'.format(self.rm.access_count))
                 Configs.OUT_FILE.write('total misses: {0}\n'.format(self.rm.miss_count))
                 Configs.OUT_FILE.write('**********************\n')

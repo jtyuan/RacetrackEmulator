@@ -59,9 +59,9 @@ def add_arguments(parser):
                         help='Set partitioning policy, "con" for continues, use "way" to '
                              'divide sets into different ways')
     parser.add_argument('-pre', '--preshift', action='store_true', help='Enable preshift for next i/o instr')
-    parser.add_argument('-i', '--maxinsts', action='store', default=None,
-                        help='Total number of instructions tosimulate (default: run forever)')
-    parser.add_argument('-v', '--verbose', action='store_true', help='Verbose mode, show debug info')
+    parser.add_argument('-I', '--maxinsts', action='store', type=int, default=None,
+                        help='Total number of traces to emulate (default: run forever)')
+    parser.add_argument('-V', '--verbose', action='store_true', help='Verbose mode, show debug info')
 
 
 if __name__ == "__main__":
@@ -100,6 +100,9 @@ if __name__ == "__main__":
     Configs.L2_SHIFT_LATENCY = args.l2_shift_latency
     Configs.L2_MISS_PENALTY = args.l2_miss_penalty
 
+    if args.maxinsts:
+        Configs.MAX_INSTR = args.maxinsts
+
     Configs.reload_attr()
 
     Configs.PORT_MODE = args.port_mode
@@ -126,7 +129,7 @@ if __name__ == "__main__":
             print('Trace file:', args.tracefile)
             l2cache = L2Cache(args.tracefile)
             while True:
-                if not l2cache.next_cycle():
+                if not l2cache.next_cycle:
                     break
     else:
         Configs.TRACE_DIR = args.directory
@@ -140,6 +143,6 @@ if __name__ == "__main__":
                 print('Trace File:', trace)
                 l2cache = L2Cache(os.path.join(Configs.TRACE_DIR, trace))
                 while True:
-                    if not l2cache.next_cycle():
+                    if not l2cache.next_cycle:
                         break
 
